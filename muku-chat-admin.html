@@ -1,1182 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MUKU Chat — Admin Panel</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-    <style>
-        :root {
-            --bg: #08080d;
-            --surface: #0f0f16;
-            --surface2: #16161f;
-            --surface3: #1c1c28;
-            --border: #222230;
-            --border2: #2e2e40;
-            --gold: #d4a843;
-            --gold-light: #f0c866;
-            --gold-dim: #7a5f1a;
-            --gold-glow: rgba(212,168,67,0.12);
-            --text: #e8e4d8;
-            --text-sub: #9994a8;
-            --text-muted: #4a4858;
-            --green: #22c55e;
-            --red: #ef4444;
-            --blue: #3b82f6;
-            --orange: #f97316;
-            --purple: #a855f7;
-            --danger-bg: rgba(239,68,68,0.1);
-            --shadow: 0 8px 40px rgba(0,0,0,0.6);
-            --shadow-gold: 0 0 30px rgba(212,168,67,0.08);
-        }
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* ===== SCROLLBAR ===== */
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
-
-        /* ===== LOGIN ===== */
-        #loginScreen {
-            position: fixed; inset: 0;
-            display: flex; align-items: center; justify-content: center;
-            background: radial-gradient(ellipse at 40% 30%, #1a1205 0%, var(--bg) 65%);
-            z-index: 9999;
-        }
-        .login-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 52px 44px;
-            width: 400px;
-            max-width: 92vw;
-            position: relative;
-            box-shadow: var(--shadow), var(--shadow-gold);
-        }
-        .login-card::before {
-            content: '';
-            position: absolute; top: -1px; left: 25%; right: 25%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--gold), transparent);
-        }
-        .login-badge {
-            display: inline-flex; align-items: center; gap: 8px;
-            background: var(--gold-glow);
-            border: 1px solid var(--gold-dim);
-            color: var(--gold);
-            padding: 5px 14px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-family: 'Syne', sans-serif;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            margin-bottom: 20px;
-        }
-        .login-card h1 {
-            font-family: 'Syne', sans-serif;
-            font-size: 32px;
-            font-weight: 800;
-            color: var(--text);
-            margin-bottom: 6px;
-            line-height: 1.1;
-        }
-        .login-card h1 span { color: var(--gold); }
-        .login-card p { color: var(--text-sub); font-size: 14px; margin-bottom: 32px; }
-        .field-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-family: 'Syne', sans-serif; }
-        .admin-input {
-            width: 100%;
-            padding: 13px 16px;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            color: var(--text);
-            font-size: 14px;
-            font-family: 'DM Sans', sans-serif;
-            outline: none;
-            margin-bottom: 18px;
-            transition: border-color 0.2s;
-        }
-        .admin-input:focus { border-color: var(--gold-dim); }
-        .admin-input::placeholder { color: var(--text-muted); }
-        .login-error {
-            color: var(--red);
-            font-size: 12px;
-            margin-bottom: 14px;
-            display: none;
-        }
-        .login-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #d4a843, #a07820);
-            color: #000;
-            border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 700;
-            font-family: 'Syne', sans-serif;
-            cursor: pointer;
-            letter-spacing: 0.5px;
-            transition: opacity 0.2s, transform 0.1s;
-        }
-        .login-btn:hover { opacity: 0.9; }
-        .login-btn:active { transform: scale(0.98); }
-
-        /* ===== APP SHELL ===== */
-        #app { display: none; min-height: 100vh; }
-        #app.show { display: flex; }
-
-        /* ===== SIDEBAR ===== */
-        .sidebar {
-            width: 240px;
-            background: var(--surface);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            position: fixed;
-            top: 0; left: 0;
-            height: 100vh;
-            z-index: 100;
-            flex-shrink: 0;
-        }
-        .sidebar-logo {
-            padding: 24px 20px 20px;
-            border-bottom: 1px solid var(--border);
-        }
-        .sidebar-logo .brand {
-            font-family: 'Syne', sans-serif;
-            font-weight: 800;
-            font-size: 20px;
-            color: var(--gold);
-            letter-spacing: -0.5px;
-        }
-        .sidebar-logo .brand-sub {
-            font-size: 10px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            font-family: 'JetBrains Mono', monospace;
-            margin-top: 2px;
-        }
-        .sidebar-live {
-            display: inline-flex; align-items: center; gap: 5px;
-            background: rgba(34,197,94,0.1);
-            border: 1px solid rgba(34,197,94,0.2);
-            color: var(--green);
-            padding: 3px 9px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-family: 'JetBrains Mono', monospace;
-            margin-top: 8px;
-        }
-        .live-dot {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: var(--green);
-            animation: blink 1.4s infinite;
-        }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-        .nav-section { padding: 16px 12px 8px; }
-        .nav-label {
-            font-size: 9px;
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            padding: 0 8px;
-            margin-bottom: 6px;
-        }
-        .nav-item {
-            display: flex; align-items: center; gap: 12px;
-            padding: 10px 12px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 14px;
-            color: var(--text-sub);
-            transition: all 0.15s;
-            margin-bottom: 2px;
-            user-select: none;
-        }
-        .nav-item:hover { background: var(--surface2); color: var(--text); }
-        .nav-item.active { background: var(--gold-glow); color: var(--gold); border: 1px solid var(--gold-dim); }
-        .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
-        .nav-item .nav-badge {
-            margin-left: auto;
-            background: var(--red);
-            color: white;
-            font-size: 10px;
-            font-weight: 700;
-            padding: 1px 6px;
-            border-radius: 10px;
-            min-width: 18px;
-            text-align: center;
-        }
-        .sidebar-footer {
-            margin-top: auto;
-            padding: 16px;
-            border-top: 1px solid var(--border);
-        }
-        .admin-chip {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 12px;
-            background: var(--surface2);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-        }
-        .admin-avatar {
-            width: 32px; height: 32px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #d4a843, #a07820);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 14px; font-weight: 800;
-            color: #000;
-            font-family: 'Syne', sans-serif;
-            flex-shrink: 0;
-        }
-        .admin-name { font-size: 13px; font-weight: 600; }
-        .admin-role { font-size: 10px; color: var(--gold); font-family: 'JetBrains Mono', monospace; }
-        .logout-link {
-            margin-left: auto;
-            background: none; border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 16px;
-            transition: color 0.15s;
-        }
-        .logout-link:hover { color: var(--red); }
-
-        /* ===== MAIN ===== */
-        .main {
-            margin-left: 240px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-        .topbar {
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-            padding: 14px 28px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky; top: 0;
-            z-index: 50;
-        }
-        .topbar-title {
-            font-family: 'Syne', sans-serif;
-            font-weight: 700;
-            font-size: 18px;
-        }
-        .topbar-right { display: flex; align-items: center; gap: 12px; }
-        .topbar-time {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-        .refresh-btn {
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            color: var(--text-sub);
-            padding: 7px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            font-family: 'DM Sans', sans-serif;
-            transition: all 0.15s;
-            display: flex; align-items: center; gap: 6px;
-        }
-        .refresh-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
-        .content { padding: 28px; flex: 1; }
-
-        /* ===== PAGES ===== */
-        .page { display: none; }
-        .page.active { display: block; animation: fadeUp 0.25s ease; }
-        @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-
-        /* ===== STAT CARDS ===== */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 28px;
-        }
-        .stat-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px 22px;
-            position: relative;
-            overflow: hidden;
-            transition: border-color 0.2s, transform 0.15s;
-        }
-        .stat-card:hover { border-color: var(--border2); transform: translateY(-2px); }
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0; right: 0;
-            width: 80px; height: 80px;
-            border-radius: 50%;
-            filter: blur(30px);
-            opacity: 0.15;
-        }
-        .stat-card.gold::before { background: var(--gold); }
-        .stat-card.green::before { background: var(--green); }
-        .stat-card.blue::before { background: var(--blue); }
-        .stat-card.red::before { background: var(--red); }
-        .stat-card.purple::before { background: var(--purple); }
-        .stat-card.orange::before { background: var(--orange); }
-        .stat-icon { font-size: 22px; margin-bottom: 12px; }
-        .stat-value {
-            font-family: 'Syne', sans-serif;
-            font-size: 32px;
-            font-weight: 800;
-            line-height: 1;
-            margin-bottom: 4px;
-        }
-        .stat-card.gold .stat-value { color: var(--gold); }
-        .stat-card.green .stat-value { color: var(--green); }
-        .stat-card.blue .stat-value { color: var(--blue); }
-        .stat-card.red .stat-value { color: var(--red); }
-        .stat-card.purple .stat-value { color: var(--purple); }
-        .stat-card.orange .stat-value { color: var(--orange); }
-        .stat-label { font-size: 12px; color: var(--text-sub); }
-        .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 6px; font-family: 'JetBrains Mono', monospace; }
-
-        /* ===== SECTION HEADERS ===== */
-        .section-header {
-            display: flex; align-items: center; justify-content: space-between;
-            margin-bottom: 16px;
-        }
-        .section-title {
-            font-family: 'Syne', sans-serif;
-            font-weight: 700;
-            font-size: 16px;
-        }
-        .section-title span { color: var(--gold); }
-
-        /* ===== TABLE ===== */
-        .table-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            overflow: hidden;
-            margin-bottom: 24px;
-        }
-        .table-toolbar {
-            padding: 14px 18px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .table-search {
-            flex: 1;
-            min-width: 200px;
-            padding: 8px 14px;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text);
-            font-size: 13px;
-            font-family: 'DM Sans', sans-serif;
-            outline: none;
-        }
-        .table-search:focus { border-color: var(--gold-dim); }
-        .table-search::placeholder { color: var(--text-muted); }
-        .filter-select {
-            padding: 8px 12px;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text);
-            font-size: 12px;
-            font-family: 'DM Sans', sans-serif;
-            outline: none;
-            cursor: pointer;
-        }
-        table { width: 100%; border-collapse: collapse; }
-        thead { background: var(--surface2); }
-        th {
-            padding: 11px 16px;
-            text-align: left;
-            font-size: 11px;
-            font-family: 'Syne', sans-serif;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-muted);
-            white-space: nowrap;
-        }
-        td {
-            padding: 12px 16px;
-            font-size: 13px;
-            border-bottom: 1px solid var(--border);
-            vertical-align: middle;
-        }
-        tr:last-child td { border-bottom: none; }
-        tr:hover td { background: rgba(255,255,255,0.015); }
-        .td-avatar {
-            width: 34px; height: 34px;
-            border-radius: 50%;
-            background: var(--surface3);
-            display: inline-flex; align-items: center; justify-content: center;
-            font-weight: 700; font-size: 14px;
-            font-family: 'Syne', sans-serif;
-            color: var(--gold);
-            border: 1px solid var(--gold-dim);
-            flex-shrink: 0;
-        }
-        .user-cell { display: flex; align-items: center; gap: 10px; }
-        .user-cell-info .name { font-weight: 600; font-size: 13px; }
-        .user-cell-info .uid { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); }
-
-        /* Badges */
-        .badge {
-            display: inline-flex; align-items: center; gap: 4px;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        .badge-green { background: rgba(34,197,94,0.1); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
-        .badge-red { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
-        .badge-gold { background: var(--gold-glow); color: var(--gold); border: 1px solid var(--gold-dim); }
-        .badge-blue { background: rgba(59,130,246,0.1); color: var(--blue); border: 1px solid rgba(59,130,246,0.2); }
-        .badge-purple { background: rgba(168,85,247,0.1); color: var(--purple); border: 1px solid rgba(168,85,247,0.2); }
-        .badge-gray { background: var(--surface3); color: var(--text-muted); border: 1px solid var(--border); }
-
-        /* Action buttons */
-        .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-        .btn-sm {
-            padding: 5px 12px;
-            border-radius: 7px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            border: 1px solid transparent;
-            font-family: 'DM Sans', sans-serif;
-            transition: all 0.15s;
-            white-space: nowrap;
-        }
-        .btn-danger { background: var(--danger-bg); color: var(--red); border-color: rgba(239,68,68,0.2); }
-        .btn-danger:hover { background: rgba(239,68,68,0.2); }
-        .btn-warning { background: rgba(249,115,22,0.1); color: var(--orange); border-color: rgba(249,115,22,0.2); }
-        .btn-warning:hover { background: rgba(249,115,22,0.2); }
-        .btn-gold { background: var(--gold-glow); color: var(--gold); border-color: var(--gold-dim); }
-        .btn-gold:hover { background: rgba(212,168,67,0.2); }
-        .btn-blue { background: rgba(59,130,246,0.1); color: var(--blue); border-color: rgba(59,130,246,0.2); }
-        .btn-blue:hover { background: rgba(59,130,246,0.2); }
-        .btn-green { background: rgba(34,197,94,0.1); color: var(--green); border-color: rgba(34,197,94,0.2); }
-        .btn-green:hover { background: rgba(34,197,94,0.2); }
-        .btn-primary {
-            background: linear-gradient(135deg, #d4a843, #a07820);
-            color: #000;
-            border: none;
-            padding: 10px 22px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 700;
-            font-family: 'Syne', sans-serif;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        .btn-primary:hover { opacity: 0.88; }
-
-        /* Empty state */
-        .empty-state {
-            text-align: center;
-            padding: 50px 20px;
-            color: var(--text-muted);
-        }
-        .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.3; }
-        .empty-state p { font-size: 14px; }
-
-        /* ===== ACTIVITY LOG ===== */
-        .activity-list { padding: 4px 0; }
-        .activity-item {
-            display: flex; align-items: flex-start; gap: 14px;
-            padding: 12px 18px;
-            border-bottom: 1px solid var(--border);
-            transition: background 0.1s;
-        }
-        .activity-item:last-child { border-bottom: none; }
-        .activity-item:hover { background: var(--surface2); }
-        .activity-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            margin-top: 5px;
-            flex-shrink: 0;
-        }
-        .activity-body { flex: 1; min-width: 0; }
-        .activity-text { font-size: 13px; line-height: 1.4; }
-        .activity-text strong { color: var(--gold); }
-        .activity-time {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            color: var(--text-muted);
-            margin-top: 3px;
-        }
-
-        /* ===== BROADCAST ===== */
-        .broadcast-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 20px;
-        }
-        .broadcast-card h3 {
-            font-family: 'Syne', sans-serif;
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 14px;
-            color: var(--gold);
-        }
-        .broadcast-textarea {
-            width: 100%;
-            padding: 14px 16px;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            color: var(--text);
-            font-size: 14px;
-            font-family: 'DM Sans', sans-serif;
-            outline: none;
-            resize: vertical;
-            min-height: 100px;
-            margin-bottom: 14px;
-        }
-        .broadcast-textarea:focus { border-color: var(--gold-dim); }
-
-        /* ===== MESSAGES VIEW ===== */
-        .conv-list { display: flex; flex-direction: column; gap: 8px; }
-        .conv-item {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 14px 18px;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-        .conv-item:hover { border-color: var(--border2); background: var(--surface2); }
-        .conv-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-        .conv-users { font-weight: 600; font-size: 14px; }
-        .conv-count { font-size: 11px; color: var(--text-muted); }
-        .conv-preview { font-size: 12px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .conv-detail { display: none; margin-top: 14px; border-top: 1px solid var(--border); padding-top: 14px; }
-        .conv-detail.open { display: block; }
-        .conv-msg {
-            display: flex; flex-direction: column;
-            padding: 8px 12px;
-            border-radius: 8px;
-            margin-bottom: 6px;
-            max-width: 75%;
-            background: var(--surface3);
-            border: 1px solid var(--border);
-        }
-        .conv-msg.sent { align-self: flex-end; background: rgba(212,168,67,0.08); border-color: var(--gold-dim); }
-        .conv-msgs-wrap { display: flex; flex-direction: column; max-height: 300px; overflow-y: auto; margin-bottom: 10px; }
-        .conv-msg-text { font-size: 13px; }
-        .conv-msg-meta { font-size: 10px; color: var(--text-muted); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
-        .del-msg-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; margin-left: auto; padding: 2px 6px; border-radius: 4px; }
-        .del-msg-btn:hover { color: var(--red); background: var(--danger-bg); }
-
-        /* ===== SETTINGS ===== */
-        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        @media(max-width:900px) { .settings-grid { grid-template-columns: 1fr; } }
-        .settings-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 22px;
-        }
-        .settings-card h3 {
-            font-family: 'Syne', sans-serif;
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-            color: var(--text-sub);
-        }
-        .setting-row {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid var(--border);
-        }
-        .setting-row:last-child { border-bottom: none; }
-        .setting-label { font-size: 13px; }
-        .setting-sub { font-size: 11px; color: var(--text-muted); }
-        .toggle {
-            position: relative;
-            width: 42px; height: 24px;
-            cursor: pointer;
-        }
-        .toggle input { display: none; }
-        .toggle-track {
-            width: 100%; height: 100%;
-            border-radius: 12px;
-            background: var(--surface3);
-            border: 1px solid var(--border);
-            transition: background 0.2s;
-        }
-        .toggle input:checked + .toggle-track { background: var(--green); border-color: var(--green); }
-        .toggle-thumb {
-            position: absolute;
-            top: 3px; left: 3px;
-            width: 18px; height: 18px;
-            border-radius: 50%;
-            background: white;
-            transition: left 0.2s;
-            pointer-events: none;
-        }
-        .toggle input:checked ~ .toggle-thumb { left: 21px; }
-
-        /* ===== CHART BAR ===== */
-        .mini-chart { margin-top: 10px; display: flex; align-items: flex-end; gap: 4px; height: 50px; }
-        .mini-bar {
-            flex: 1;
-            border-radius: 3px 3px 0 0;
-            transition: height 0.4s ease;
-            cursor: pointer;
-            position: relative;
-        }
-        .mini-bar:hover::after {
-            content: attr(data-val);
-            position: absolute;
-            top: -20px; left: 50%;
-            transform: translateX(-50%);
-            font-size: 9px;
-            color: var(--gold);
-            white-space: nowrap;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        /* ===== MODAL ===== */
-        .modal-overlay {
-            display: none;
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.75);
-            z-index: 500;
-            align-items: center; justify-content: center;
-        }
-        .modal-overlay.show { display: flex; }
-        .modal-box {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 28px;
-            width: 480px; max-width: 94vw;
-            box-shadow: var(--shadow);
-            animation: fadeUp 0.2s ease;
-        }
-        .modal-box h3 {
-            font-family: 'Syne', sans-serif;
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-        .modal-box p { font-size: 14px; color: var(--text-sub); margin-bottom: 20px; }
-        .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
-        .btn-cancel {
-            padding: 10px 20px;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 13px;
-            font-family: 'DM Sans', sans-serif;
-            transition: all 0.15s;
-        }
-        .btn-cancel:hover { border-color: var(--border2); }
-        .btn-confirm-danger {
-            padding: 10px 20px;
-            background: var(--red);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 700;
-            font-family: 'Syne', sans-serif;
-            transition: opacity 0.2s;
-        }
-        .btn-confirm-danger:hover { opacity: 0.85; }
-
-        /* ===== TOAST ===== */
-        #toastArea {
-            position: fixed;
-            bottom: 24px; right: 24px;
-            z-index: 9999;
-            display: flex; flex-direction: column; gap: 8px;
-            align-items: flex-end;
-        }
-        .toast {
-            background: var(--surface2);
-            border: 1px solid var(--border2);
-            color: var(--text);
-            padding: 11px 18px;
-            border-radius: 10px;
-            font-size: 13px;
-            box-shadow: var(--shadow);
-            animation: toastSlide 0.3s ease, toastFade 0.3s ease 2.5s forwards;
-            max-width: 300px;
-        }
-        .toast.success { border-color: rgba(34,197,94,0.3); color: var(--green); }
-        .toast.error { border-color: rgba(239,68,68,0.3); color: var(--red); }
-        @keyframes toastSlide { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
-        @keyframes toastFade { to { opacity:0; } }
-
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 900px) {
-            .sidebar { width: 200px; }
-            .main { margin-left: 200px; }
-        }
-        @media (max-width: 700px) {
-            .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
-            .sidebar.mob-open { transform: translateX(0); }
-            .main { margin-left: 0; }
-            .mob-menu-btn { display: flex !important; }
-            .stats-grid { grid-template-columns: 1fr 1fr; }
-        }
-        .mob-menu-btn {
-            display: none;
-            background: none; border: none;
-            color: var(--text); font-size: 20px;
-            cursor: pointer;
-        }
-
-        /* Spinner */
-        .spin {
-            display: inline-block;
-            width: 14px; height: 14px;
-            border: 2px solid var(--border);
-            border-top-color: var(--gold);
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Info row */
-        .info-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-    </style>
-</head>
-<body>
-
-<!-- Toast -->
-<div id="toastArea"></div>
-
-<!-- Modal -->
-<div class="modal-overlay" id="confirmModal">
-    <div class="modal-box">
-        <h3 id="modalTitle">Confirm Action</h3>
-        <p id="modalDesc">Are you sure?</p>
-        <div class="modal-footer">
-            <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-            <button class="btn-confirm-danger" id="modalConfirmBtn">Confirm</button>
-        </div>
-    </div>
-</div>
-
-<!-- Login -->
-<div id="loginScreen">
-    <div class="login-card">
-        <div class="login-badge">🔐 Restricted Access</div>
-        <h1>MUKU <span>Admin</span></h1>
-        <p>Chat platform management console</p>
-        <div class="field-label">Admin Username</div>
-        <input class="admin-input" id="loginUser" placeholder="admin" autocomplete="off">
-        <div class="field-label">Password</div>
-        <input class="admin-input" id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
-        <div class="login-error" id="loginError">❌ Wrong credentials</div>
-        <button class="login-btn" onclick="doLogin()">Enter Panel →</button>
-    </div>
-</div>
-
-<!-- App -->
-<div id="app">
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-logo">
-            <div class="brand">MUKU Chat</div>
-            <div class="brand-sub">Admin Console</div>
-            <div class="sidebar-live"><div class="live-dot"></div> LIVE</div>
-        </div>
-        <div class="nav-section">
-            <div class="nav-label">Overview</div>
-            <div class="nav-item active" onclick="switchPage('dashboard',this)">
-                <span class="nav-icon">📊</span> Dashboard
-            </div>
-            <div class="nav-item" onclick="switchPage('users',this)">
-                <span class="nav-icon">👥</span> Users
-                <span class="nav-badge" id="navUserBadge">0</span>
-            </div>
-        </div>
-        <div class="nav-section">
-            <div class="nav-label">Content</div>
-            <div class="nav-item" onclick="switchPage('messages',this)">
-                <span class="nav-icon">💬</span> Messages
-            </div>
-            <div class="nav-item" onclick="switchPage('activity',this)">
-                <span class="nav-icon">📋</span> Activity Log
-            </div>
-            <div class="nav-item" onclick="switchPage('files',this)">
-                <span class="nav-icon">📁</span> Files
-            </div>
-        </div>
-        <div class="nav-section">
-            <div class="nav-label">Tools</div>
-            <div class="nav-item" onclick="switchPage('broadcast',this)">
-                <span class="nav-icon">📢</span> Broadcast
-            </div>
-            <div class="nav-item" onclick="switchPage('banned',this)">
-                <span class="nav-icon">🚫</span> Banned Users
-            </div>
-            <div class="nav-item" onclick="switchPage('settings',this)">
-                <span class="nav-icon">⚙️</span> Settings
-            </div>
-        </div>
-        <div class="sidebar-footer">
-            <div class="admin-chip">
-                <div class="admin-avatar">A</div>
-                <div>
-                    <div class="admin-name">Admin</div>
-                    <div class="admin-role">SUPERADMIN</div>
-                </div>
-                <button class="logout-link" title="Logout" onclick="adminLogout()">🚪</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="main">
-        <div class="topbar">
-            <div style="display:flex;align-items:center;gap:12px;">
-                <button class="mob-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('mob-open')">☰</button>
-                <div class="topbar-title" id="topbarTitle">Dashboard</div>
-            </div>
-            <div class="topbar-right">
-                <div class="topbar-time" id="clock">--:--:--</div>
-                <button class="refresh-btn" onclick="refreshAll()">⟳ Refresh</button>
-            </div>
-        </div>
-
-        <div class="content">
-
-            <!-- DASHBOARD -->
-            <div class="page active" id="page-dashboard">
-                <div class="stats-grid">
-                    <div class="stat-card gold">
-                        <div class="stat-icon">👥</div>
-                        <div class="stat-value" id="statTotal">—</div>
-                        <div class="stat-label">Total Users</div>
-                        <div class="stat-sub" id="statTotalSub">loading...</div>
-                    </div>
-                    <div class="stat-card green">
-                        <div class="stat-icon">🟢</div>
-                        <div class="stat-value" id="statOnline">—</div>
-                        <div class="stat-label">Online Now</div>
-                        <div class="stat-sub" id="statOnlineSub">live</div>
-                    </div>
-                    <div class="stat-card blue">
-                        <div class="stat-icon">💬</div>
-                        <div class="stat-value" id="statMessages">—</div>
-                        <div class="stat-label">Total Messages</div>
-                        <div class="stat-sub">all conversations</div>
-                    </div>
-                    <div class="stat-card purple">
-                        <div class="stat-icon">🗣️</div>
-                        <div class="stat-value" id="statConvs">—</div>
-                        <div class="stat-label">Conversations</div>
-                        <div class="stat-sub">unique pairs</div>
-                    </div>
-                    <div class="stat-card red">
-                        <div class="stat-icon">🚫</div>
-                        <div class="stat-value" id="statBanned">—</div>
-                        <div class="stat-label">Banned Users</div>
-                        <div class="stat-sub">restricted</div>
-                    </div>
-                    <div class="stat-card orange">
-                        <div class="stat-icon">📁</div>
-                        <div class="stat-value" id="statFiles">—</div>
-                        <div class="stat-label">Files Shared</div>
-                        <div class="stat-sub">images + docs</div>
-                    </div>
-                </div>
-
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
-                    <div class="table-card" style="padding:20px;">
-                        <div class="section-title" style="margin-bottom:14px;">👥 Recent <span>Users</span></div>
-                        <div id="recentUsers"></div>
-                    </div>
-                    <div class="table-card" style="padding:20px;">
-                        <div class="section-title" style="margin-bottom:14px;">💬 Recent <span>Messages</span></div>
-                        <div id="recentMessages"></div>
-                    </div>
-                </div>
-
-                <div class="table-card" style="padding:20px;">
-                    <div class="section-title" style="margin-bottom:14px;">📈 Message Activity <span>(Today)</span></div>
-                    <div class="mini-chart" id="activityChart"></div>
-                    <div style="display:flex;justify-content:space-between;margin-top:6px;">
-                        <span style="font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">00:00</span>
-                        <span style="font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">12:00</span>
-                        <span style="font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">23:59</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- USERS -->
-            <div class="page" id="page-users">
-                <div class="table-card">
-                    <div class="table-toolbar">
-                        <input class="table-search" id="userSearch" placeholder="🔍 Search by name or ID..." oninput="renderUsers()">
-                        <select class="filter-select" id="userFilter" onchange="renderUsers()">
-                            <option value="all">All Users</option>
-                            <option value="online">Online</option>
-                            <option value="offline">Offline</option>
-                        </select>
-                        <button class="btn-sm btn-danger" onclick="confirmDeleteAllOffline()">🗑 Delete Offline</button>
-                    </div>
-                    <div style="overflow-x:auto;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>User</th>
-                                    <th>Status</th>
-                                    <th>Joined</th>
-                                    <th>Last Seen</th>
-                                    <th>Messages</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="usersTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- MESSAGES -->
-            <div class="page" id="page-messages">
-                <div class="table-toolbar" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;">
-                    <input class="table-search" id="msgSearch" placeholder="🔍 Search conversations..." oninput="renderConversations()">
-                    <button class="btn-sm btn-danger" onclick="confirmDeleteAllMsgs()">🗑 Delete All Messages</button>
-                </div>
-                <div class="conv-list" id="convList"></div>
-            </div>
-
-            <!-- ACTIVITY LOG -->
-            <div class="page" id="page-activity">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                    <div class="section-title">📋 Activity <span>Log</span></div>
-                    <div style="display:flex;gap:8px;">
-                        <select class="filter-select" id="activityFilter" onchange="renderActivity()">
-                            <option value="all">All Events</option>
-                            <option value="join">Joins</option>
-                            <option value="message">Messages</option>
-                            <option value="leave">Leaves</option>
-                            <option value="file">Files</option>
-                        </select>
-                        <button class="btn-sm btn-danger" onclick="clearActivityLog()">🗑 Clear Log</button>
-                    </div>
-                </div>
-                <div class="table-card">
-                    <div class="activity-list" id="activityList"></div>
-                </div>
-            </div>
-
-            <!-- FILES -->
-            <div class="page" id="page-files">
-                <div class="table-card">
-                    <div class="table-toolbar">
-                        <input class="table-search" id="fileSearch" placeholder="🔍 Search files..." oninput="renderFiles()">
-                        <select class="filter-select" id="fileFilter" onchange="renderFiles()">
-                            <option value="all">All Types</option>
-                            <option value="image">Images</option>
-                            <option value="audio">Audio</option>
-                            <option value="file">Files</option>
-                        </select>
-                    </div>
-                    <div style="overflow-x:auto;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Type</th>
-                                    <th>Name / URL</th>
-                                    <th>Sent By</th>
-                                    <th>Time</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="filesTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- BROADCAST -->
-            <div class="page" id="page-broadcast">
-                <div class="broadcast-card">
-                    <h3>📢 Send Broadcast Message</h3>
-                    <p style="font-size:13px;color:var(--text-sub);margin-bottom:14px;">Yeh message sabhi users ke Firebase mein ek special "broadcast" node mein post hoga. Chat app mein is node ko listen karke notification dikhao.</p>
-                    <textarea class="broadcast-textarea" id="broadcastText" placeholder="Message likho jo sab users ko dikhana hai..."></textarea>
-                    <div style="display:flex;gap:10px;align-items:center;">
-                        <button class="btn-primary" onclick="sendBroadcast()">📤 Send to All Users</button>
-                        <span id="broadcastStatus" style="font-size:12px;color:var(--text-muted);"></span>
-                    </div>
-                </div>
-                <div class="table-card" style="padding:20px;">
-                    <div class="section-title" style="margin-bottom:14px;">📜 Broadcast <span>History</span></div>
-                    <div id="broadcastHistory"></div>
-                </div>
-            </div>
-
-            <!-- BANNED -->
-            <div class="page" id="page-banned">
-                <div class="table-card">
-                    <div class="table-toolbar">
-                        <input class="table-search" id="bannedSearch" placeholder="🔍 Search banned users..." oninput="renderBanned()">
-                    </div>
-                    <div style="overflow-x:auto;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>User</th>
-                                    <th>Banned On</th>
-                                    <th>Reason</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="bannedTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SETTINGS -->
-            <div class="page" id="page-settings">
-                <div class="settings-grid">
-                    <div class="settings-card">
-                        <h3>🔐 Security</h3>
-                        <div class="setting-row">
-                            <div>
-                                <div class="setting-label">New Admin Password</div>
-                                <div class="setting-sub">Change your admin console password</div>
-                            </div>
-                        </div>
-                        <input class="admin-input" id="newPassInput" type="password" placeholder="New password" style="margin-top:10px;">
-                        <input class="admin-input" id="newPassConfirm" type="password" placeholder="Confirm password">
-                        <button class="btn-primary" onclick="changePassword()" style="margin-top:4px;">Save Password</button>
-                    </div>
-                    <div class="settings-card">
-                        <h3>⚙️ Platform Controls</h3>
-                        <div class="setting-row">
-                            <div>
-                                <div class="setting-label">Allow New Registrations</div>
-                                <div class="setting-sub">Let new users join the chat</div>
-                            </div>
-                            <label class="toggle">
-                                <input type="checkbox" id="toggleReg" checked onchange="saveSetting('allowRegistration', this.checked)">
-                                <div class="toggle-track"></div>
-                                <div class="toggle-thumb"></div>
-                            </label>
-                        </div>
-                        <div class="setting-row">
-                            <div>
-                                <div class="setting-label">Maintenance Mode</div>
-                                <div class="setting-sub">Block all chat activity</div>
-                            </div>
-                            <label class="toggle">
-                                <input type="checkbox" id="toggleMaint" onchange="saveSetting('maintenanceMode', this.checked)">
-                                <div class="toggle-track"></div>
-                                <div class="toggle-thumb"></div>
-                            </label>
-                        </div>
-                        <div class="setting-row">
-                            <div>
-                                <div class="setting-label">File Uploads</div>
-                                <div class="setting-sub">Allow users to share files</div>
-                            </div>
-                            <label class="toggle">
-                                <input type="checkbox" id="toggleFiles" checked onchange="saveSetting('allowFiles', this.checked)">
-                                <div class="toggle-track"></div>
-                                <div class="toggle-thumb"></div>
-                            </label>
-                        </div>
-                        <div class="setting-row">
-                            <div>
-                                <div class="setting-label">Video Calls</div>
-                                <div class="setting-sub">Allow P2P video calling</div>
-                            </div>
-                            <label class="toggle">
-                                <input type="checkbox" id="toggleVideo" checked onchange="saveSetting('allowVideo', this.checked)">
-                                <div class="toggle-track"></div>
-                                <div class="toggle-thumb"></div>
-                            </label>
-                        </div>
-                    </div>
-                    <div class="settings-card">
-                        <h3>🗄️ Database</h3>
-                        <div class="setting-row">
-                            <div>
-                                <div class="setting-label">Delete All Messages</div>
-                                <div class="setting-sub">Wipe entire messages node</div>
-                            </div>
-                            <button class="btn-sm btn-danger" onclick="confirmDeleteAllMsgs()">Delete</button>
-                        </div>
-                        <div class="setting-row">
-                            <div>
-                                <div class="setting-label">Delete Offline Users</div>
-                                <div class="setting-sub">Remove all inactive accounts</div>
-                            </div>
-                            <button class="btn-sm btn-danger" onclick="confirmDeleteAllOffline()">Delete</button>
-                        </div>
-                        <div class="setting-row">
-                            <div>
-                                <div class="setting-label">Clear Activity Log</div>
-                                <div class="setting-sub">Delete all admin log entries</div>
-                            </div>
-                            <button class="btn-sm btn-warning" onclick="clearActivityLog()">Clear</button>
-                        </div>
-                    </div>
-                    <div class="settings-card">
-                        <h3>ℹ️ System Info</h3>
-                        <div class="setting-row">
-                            <div class="setting-label">Firebase Project</div>
-                            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);" id="settingProjectId">—</span>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-label">Admin Panel Version</div>
-                            <span class="badge badge-gold">v2.0</span>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-label">Build</div>
-                            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);">MUKU-ADMIN-2024</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MUKU Chat — Admin Panel v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 
 <script>
-// ========== FIREBASE CONFIG ==========
+// ╔══════════════════════════════════════╗
+// ║   FIREBASE CONFIG — YAHAN DAALO     ║
+// ╚══════════════════════════════════════╝
 const firebaseConfig = {
   apiKey: "AIzaSyC1FjfaBCgXtdOWN_hXjw07l1BLKwnjHpA",
   authDomain: "muku-chat-ffd48.firebaseapp.com",
@@ -1187,577 +24,1453 @@ const firebaseConfig = {
   appId: "1:322464072249:web:c5dee4254e07e895f283e8",
   measurementId: "G-6TPNVP9PEE"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const storage = firebase.storage();
 
-// ========== ADMIN CREDENTIALS (change these!) ==========
-const ADMIN_CREDENTIALS = {
-    username: 'mukuadmin',
-    password: 'muku@2024'
-};
+// ╔══════════════════════════════════════╗
+// ║   ADMIN CREDENTIALS — CHANGE KARO  ║
+// ╚══════════════════════════════════════╝
+const ADMIN_USER = "mukuadmin";
+const ADMIN_PASS = "muku@2024";
+</script>
 
-// ========== GLOBALS ==========
-let allUsers = {}, allMessages = {}, activityLog = [], allBroadcasts = [];
-let adminPass = localStorage.getItem('adminPass') || ADMIN_CREDENTIALS.password;
-let pendingAction = null;
+<style>
+:root {
+  --bg:#07070c; --s1:#0d0d14; --s2:#13131c; --s3:#1a1a26;
+  --border:#1e1e2e; --border2:#282838;
+  --gold:#d4a843; --gold2:#f0c866; --gold3:#7a5f1a; --glow:rgba(212,168,67,.1);
+  --text:#e8e4d8; --sub:#8a8698; --muted:#424050;
+  --green:#22c55e; --red:#ef4444; --blue:#3b82f6;
+  --orange:#f97316; --purple:#a855f7; --cyan:#06b6d4;
+  --shadow:0 8px 40px rgba(0,0,0,.7);
+  --sb:220px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
 
-// ========== LOGIN ==========
+/* ── TOAST ── */
+#toasts{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.toast{background:var(--s2);border:1px solid var(--border2);color:var(--text);padding:10px 16px;border-radius:10px;font-size:13px;box-shadow:var(--shadow);animation:tsl .3s ease,tfd .3s 2.5s forwards;max-width:280px}
+.toast.ok{border-color:rgba(34,197,94,.3);color:var(--green)}
+.toast.err{border-color:rgba(239,68,68,.3);color:var(--red)}
+.toast.info{border-color:rgba(59,130,246,.3);color:var(--blue)}
+@keyframes tsl{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+@keyframes tfd{to{opacity:0}}
+
+/* ── LOGIN ── */
+#loginScreen{position:fixed;inset:0;background:radial-gradient(ellipse at 40% 30%,#1a1205 0%,var(--bg) 65%);display:flex;align-items:center;justify-content:center;z-index:9999}
+.lcard{background:var(--s1);border:1px solid var(--border);border-radius:22px;padding:48px 40px;width:380px;max-width:92vw;position:relative;box-shadow:var(--shadow),0 0 40px rgba(212,168,67,.05)}
+.lcard::before{content:'';position:absolute;top:-1px;left:25%;right:25%;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.lbadge{display:inline-flex;align-items:center;gap:6px;background:var(--glow);border:1px solid var(--gold3);color:var(--gold);padding:4px 12px;border-radius:18px;font-size:10px;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:16px}
+.lcard h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:4px}
+.lcard h1 span{color:var(--gold)}
+.lcard>p{font-size:13px;color:var(--sub);margin-bottom:28px}
+.flbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-family:'Syne',sans-serif}
+.ainput{width:100%;padding:11px 14px;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:14px;transition:border-color .2s}
+.ainput:focus{border-color:var(--gold3)}
+.ainput::placeholder{color:var(--muted)}
+.lerr{color:var(--red);font-size:12px;margin-bottom:12px;display:none}
+.lbtn{width:100%;padding:13px;background:linear-gradient(135deg,#d4a843,#a07820);color:#000;border:none;border-radius:11px;font-size:15px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;transition:opacity .2s}
+.lbtn:hover{opacity:.9}
+.lmeta{margin-top:14px;font-size:11px;color:var(--muted);text-align:center;font-family:'JetBrains Mono',monospace}
+
+/* ── APP SHELL ── */
+#app{display:none;min-height:100vh}
+#app.on{display:flex}
+
+/* ── SIDEBAR ── */
+.sb{
+  width:var(--sb);background:var(--s1);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;
+  z-index:100;flex-shrink:0;transition:transform .3s;
+}
+.sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.sb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--gold);letter-spacing:-.3px}
+.sb-sub{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;font-family:'JetBrains Mono',monospace;margin-top:2px}
+.sb-live{display:inline-flex;align-items:center;gap:5px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);color:var(--green);padding:3px 9px;border-radius:10px;font-size:10px;font-family:'JetBrains Mono',monospace;margin-top:8px}
+.ldot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.nav-sec{padding:14px 10px 6px}
+.nav-lbl{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;padding:0 8px;margin-bottom:5px}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;
+  border-radius:9px;cursor:pointer;font-size:13px;color:var(--sub);
+  transition:all .15s;margin-bottom:1px;user-select:none;position:relative;
+}
+.nav-item:hover{background:var(--s2);color:var(--text)}
+.nav-item.active{background:var(--glow);color:var(--gold);border:1px solid var(--gold3)}
+.nav-ico{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:16px;text-align:center}
+.nav-badge.gold{background:var(--gold3);color:#fff}
+.sb-foot{margin-top:auto;padding:14px;border-top:1px solid var(--border)}
+.admin-chip{display:flex;align-items:center;gap:9px;padding:9px 10px;background:var(--s2);border-radius:10px;border:1px solid var(--border)}
+.achip-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#d4a843,#a07820);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#000;font-family:'Syne',sans-serif;flex-shrink:0}
+.achip-name{font-size:12px;font-weight:600}
+.achip-role{font-size:9px;color:var(--gold);font-family:'JetBrains Mono',monospace}
+.sb-logout{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;transition:color .15s}
+.sb-logout:hover{color:var(--red)}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sb);flex:1;display:flex;flex-direction:column;min-height:100vh}
+
+/* TOPBAR */
+.topbar{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  padding:12px 24px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:50;gap:12px;
+}
+.topbar-l{display:flex;align-items:center;gap:12px}
+.mob-menu{display:none;background:none;border:none;color:var(--text);font-size:20px;cursor:pointer}
+.page-title{font-family:'Syne',sans-serif;font-weight:700;font-size:17px}
+.topbar-r{display:flex;align-items:center;gap:10px}
+.tb-clock{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}
+.tb-conn{display:flex;align-items:center;gap:5px;font-size:11px;font-family:'JetBrains Mono',monospace}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.conn-dot.off{background:var(--red)}
+.tbtn{background:var(--s2);border:1px solid var(--border);color:var(--sub);padding:6px 13px;border-radius:8px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;transition:all .15s;display:flex;align-items:center;gap:5px}
+.tbtn:hover{border-color:var(--gold3);color:var(--gold)}
+
+/* CONTENT */
+.content{padding:24px;flex:1}
+
+/* ── PAGES ── */
+.page{display:none}
+.page.active{display:block;animation:fadeup .22s ease}
+@keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── STAT CARDS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+.sc{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;transition:border-color .2s,transform .15s;cursor:default}
+.sc:hover{transform:translateY(-2px)}
+.sc::after{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;filter:blur(28px);opacity:.14}
+.sc.gold::after{background:var(--gold)}
+.sc.green::after{background:var(--green)}
+.sc.blue::after{background:var(--blue)}
+.sc.purple::after{background:var(--purple)}
+.sc.red::after{background:var(--red)}
+.sc.orange::after{background:var(--orange)}
+.sc.cyan::after{background:var(--cyan)}
+.sc-icon{font-size:20px;margin-bottom:10px}
+.sc-val{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;line-height:1;margin-bottom:3px}
+.sc.gold .sc-val{color:var(--gold)}.sc.green .sc-val{color:var(--green)}.sc.blue .sc-val{color:var(--blue)}
+.sc.purple .sc-val{color:var(--purple)}.sc.red .sc-val{color:var(--red)}.sc.orange .sc-val{color:var(--orange)}.sc.cyan .sc-val{color:var(--cyan)}
+.sc-lbl{font-size:12px;color:var(--sub)}
+.sc-sub{font-size:10px;color:var(--muted);margin-top:5px;font-family:'JetBrains Mono',monospace}
+.sc-trend{position:absolute;top:14px;right:14px;font-size:11px;font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:8px}
+.sc-trend.up{background:rgba(34,197,94,.1);color:var(--green)}
+.sc-trend.down{background:rgba(239,68,68,.1);color:var(--red)}
+
+/* ── CARDS / TABLES ── */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px}
+.card-title span{color:var(--gold)}
+.card-body{padding:18px}
+.toolbar{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tsearch{flex:1;min-width:180px;padding:7px 13px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
+.tsearch:focus{border-color:var(--gold3)}
+.tsearch::placeholder{color:var(--muted)}
+.tselect{padding:7px 11px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--s2)}
+th{padding:10px 14px;text-align:left;font-size:10px;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);white-space:nowrap}
+td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.012)}
+/* Table selection */
+tr.selected td{background:rgba(212,168,67,.06)}
+.row-check{width:16px;height:16px;cursor:pointer;accent-color:var(--gold)}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:18px;font-size:11px;font-weight:600;white-space:nowrap}
+.bg{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.br{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.bb{background:rgba(59,130,246,.1);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
+.bo{background:rgba(249,115,22,.1);color:var(--orange);border:1px solid rgba(249,115,22,.2)}
+.bp{background:rgba(168,85,247,.1);color:var(--purple);border:1px solid rgba(168,85,247,.2)}
+.bgd{background:var(--glow);color:var(--gold);border:1px solid var(--gold3)}
+.bk{background:var(--s2);color:var(--muted);border:1px solid var(--border)}
+.bc{background:rgba(6,182,212,.1);color:var(--cyan);border:1px solid rgba(6,182,212,.2)}
+
+/* User cell */
+.ucell{display:flex;align-items:center;gap:9px}
+.uav{width:32px;height:32px;border-radius:50%;background:var(--s3);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;font-family:'Syne',sans-serif;color:var(--gold);border:1px solid var(--gold3);flex-shrink:0}
+.uinfo .uname{font-weight:600;font-size:13px}
+.uinfo .uid{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
+
+/* ── ACTION BUTTONS ── */
+.acts{display:flex;gap:5px;flex-wrap:wrap}
+.btn{padding:4px 11px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid transparent;font-family:'DM Sans',sans-serif;transition:all .15s;white-space:nowrap}
+.btn-r{background:rgba(239,68,68,.1);color:var(--red);border-color:rgba(239,68,68,.2)}.btn-r:hover{background:rgba(239,68,68,.2)}
+.btn-o{background:rgba(249,115,22,.1);color:var(--orange);border-color:rgba(249,115,22,.2)}.btn-o:hover{background:rgba(249,115,22,.2)}
+.btn-g{background:rgba(212,168,67,.1);color:var(--gold);border-color:var(--gold3)}.btn-g:hover{background:rgba(212,168,67,.2)}
+.btn-b{background:rgba(59,130,246,.1);color:var(--blue);border-color:rgba(59,130,246,.2)}.btn-b:hover{background:rgba(59,130,246,.2)}
+.btn-gr{background:rgba(34,197,94,.1);color:var(--green);border-color:rgba(34,197,94,.2)}.btn-gr:hover{background:rgba(34,197,94,.2)}
+.btn-primary{background:linear-gradient(135deg,#d4a843,#a07820);color:#000;border:none;padding:9px 20px;border-radius:9px;font-size:13px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;transition:opacity .2s}
+.btn-primary:hover{opacity:.88}
+.btn-outline{background:var(--s2);border:1px solid var(--border);color:var(--text);padding:8px 16px;border-radius:9px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s}
+.btn-outline:hover{border-color:var(--border2)}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:44px 20px;color:var(--muted)}
+.empty-ico{font-size:38px;margin-bottom:10px;opacity:.25}
+.empty p{font-size:13px}
+
+/* ── ACTIVITY LOG ── */
+.alist{}
+.aitem{display:flex;align-items:flex-start;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border);transition:background .1s}
+.aitem:last-child{border-bottom:none}
+.aitem:hover{background:var(--s2)}
+.adot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.abody{flex:1;min-width:0}
+.atext{font-size:13px;line-height:1.4}
+.atext strong{color:var(--gold)}
+.atime{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px}
+
+/* ── CONVERSATIONS ── */
+.conv-item{background:var(--s1);border:1px solid var(--border);border-radius:11px;margin-bottom:8px;overflow:hidden;transition:border-color .15s}
+.conv-item:hover{border-color:var(--border2)}
+.conv-hdr{padding:12px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.conv-nm{font-weight:600;font-size:13px}
+.conv-prev{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px}
+.conv-body{display:none;border-top:1px solid var(--border);padding:12px 16px}
+.conv-body.open{display:block}
+.cmsg-wrap{display:flex;flex-direction:column;max-height:260px;overflow-y:auto;gap:4px;margin-bottom:10px}
+.cmsg{padding:7px 11px;border-radius:10px;font-size:12px;background:var(--s2);border:1px solid var(--border);max-width:75%;display:flex;flex-direction:column;gap:3px}
+.cmsg.sent{align-self:flex-end;background:rgba(212,168,67,.08);border-color:var(--gold3)}
+.cmsg-from{font-size:10px;color:var(--gold);font-weight:700}
+.cmsg-time{font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.cdel{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 5px;border-radius:4px;margin-left:auto;flex-shrink:0}
+.cdel:hover{color:var(--red);background:rgba(239,68,68,.1)}
+
+/* ── BROADCAST ── */
+.bc-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:18px}
+.bc-card h3{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--gold);margin-bottom:12px}
+.bc-type-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.bc-type{padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--s2);color:var(--sub);transition:all .15s;font-family:'DM Sans',sans-serif}
+.bc-type.sel{background:var(--glow);color:var(--gold);border-color:var(--gold3)}
+.bc-ta{width:100%;padding:12px 14px;background:var(--s2);border:1px solid var(--border);border-radius:11px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;resize:vertical;min-height:90px;margin-bottom:12px}
+.bc-ta:focus{border-color:var(--gold3)}
+
+/* ── SETTINGS ── */
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.sg{grid-template-columns:1fr}}
+.scard{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:20px}
+.scard h3{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--sub);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.srow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)}
+.srow:last-child{border-bottom:none}
+.slbl{font-size:13px}
+.ssub{font-size:11px;color:var(--muted)}
+/* Toggle */
+.tog{position:relative;width:40px;height:22px;cursor:pointer;flex-shrink:0}
+.tog input{display:none}
+.tog-track{width:100%;height:100%;border-radius:11px;background:var(--s3);border:1px solid var(--border);transition:background .2s}
+.tog input:checked+.tog-track{background:var(--green);border-color:var(--green)}
+.tog-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;pointer-events:none}
+.tog input:checked~.tog-thumb{left:21px}
+
+/* ── CHARTS ── */
+.chart-wrap{position:relative;height:60px;margin-top:8px}
+.hbar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.hbar-lbl{font-size:11px;color:var(--sub);width:80px;flex-shrink:0;text-align:right;font-family:'JetBrains Mono',monospace}
+.hbar-track{flex:1;background:var(--s2);border-radius:4px;height:14px;overflow:hidden}
+.hbar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.hbar-val{font-size:11px;color:var(--muted);width:30px;text-align:right;font-family:'JetBrains Mono',monospace}
+
+/* ── MINI CHART BARS ── */
+.mbars{display:flex;align-items:flex-end;gap:3px;height:56px}
+.mbar{flex:1;border-radius:3px 3px 0 0;cursor:pointer;transition:height .4s ease,opacity .15s;position:relative;min-width:6px}
+.mbar:hover{opacity:.8}
+.mbar::after{content:attr(data-v);position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--gold);white-space:nowrap;font-family:'JetBrains Mono',monospace;opacity:0;transition:opacity .15s}
+.mbar:hover::after{opacity:1}
+
+/* ── USER PROFILE MODAL ── */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:600;align-items:center;justify-content:center;padding:20px}
+.modal-ov.on{display:flex}
+.mbox{background:var(--s1);border:1px solid var(--border);border-radius:18px;width:100%;max-width:560px;box-shadow:var(--shadow);max-height:90vh;overflow-y:auto;animation:fadeup .2s ease}
+.mbox-head{padding:20px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.mbox-title{font-family:'Syne',sans-serif;font-weight:700;font-size:16px}
+.mbox-x{background:none;border:none;color:var(--sub);font-size:20px;cursor:pointer;transition:color .15s}
+.mbox-x:hover{color:var(--text)}
+.mbox-body{padding:22px}
+
+/* CONFIRM MODAL */
+.cfm-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:700;align-items:center;justify-content:center}
+.cfm-ov.on{display:flex}
+.cfm-box{background:var(--s1);border:1px solid var(--border);border-radius:18px;padding:26px;width:440px;max-width:92vw;box-shadow:var(--shadow);animation:fadeup .2s ease}
+.cfm-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:6px}
+.cfm-desc{font-size:13px;color:var(--sub);margin-bottom:20px;line-height:1.6}
+.cfm-foot{display:flex;gap:10px;justify-content:flex-end}
+
+/* ── BULK ACTION BAR ── */
+.bulk-bar{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--s2);border:1px solid var(--border2);border-radius:14px;
+  padding:10px 18px;display:none;align-items:center;gap:14px;
+  box-shadow:var(--shadow);z-index:400;white-space:nowrap;
+  animation:fadeup .2s ease;
+}
+.bulk-bar.on{display:flex}
+.bulk-lbl{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--gold)}
+
+/* ── KEYWORD FILTER ── */
+.kw-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.kw-tag{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;display:flex;align-items:center;gap:5px}
+.kw-x{background:none;border:none;color:var(--sub);cursor:pointer;font-size:13px;line-height:1;padding:0 2px}
+.kw-x:hover{color:var(--red)}
+
+/* ── HEALTH MONITOR ── */
+.health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:18px}
+.hcard{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px}
+.hcard-lbl{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:6px}
+.hcard-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--gold)}
+.hcard-sub{font-size:11px;color:var(--sub);margin-top:3px}
+.hprogress{margin-top:10px;background:var(--s2);border-radius:4px;height:5px}
+.hprogress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--gold3),var(--gold))}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){--sb:190px}
+@media(max-width:700px){
+  .sb{transform:translateX(-100%)}.sb.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .mob-menu{display:block}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .sg{grid-template-columns:1fr}
+  .conv-prev{max-width:160px}
+}
+.sb-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:90}
+.sb-ov.on{display:block}
+</style>
+</head>
+<body>
+
+<div id="toasts"></div>
+
+<!-- ═══ CONFIRM MODAL ═══ -->
+<div class="cfm-ov" id="cfmOv">
+  <div class="cfm-box">
+    <div class="cfm-title" id="cfmTitle">Confirm</div>
+    <div class="cfm-desc" id="cfmDesc">Are you sure?</div>
+    <div class="cfm-foot">
+      <button class="btn-outline" onclick="closeCfm()">Cancel</button>
+      <button style="padding:9px 20px;background:var(--red);color:#fff;border:none;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer;font-family:'Syne',sans-serif" id="cfmOkBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ USER PROFILE MODAL ═══ -->
+<div class="modal-ov" id="profileOv">
+  <div class="mbox" style="max-width:520px">
+    <div class="mbox-head">
+      <div class="mbox-title">👤 User Profile</div>
+      <button class="mbox-x" onclick="closeProfile()">✕</button>
+    </div>
+    <div class="mbox-body" id="profileContent"></div>
+  </div>
+</div>
+
+<!-- ═══ SIDEBAR OVERLAY ═══ -->
+<div class="sb-ov" id="sbOv" onclick="closeMobSb()"></div>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="loginScreen">
+  <div class="lcard">
+    <div class="lbadge">🔐 Restricted</div>
+    <h1>MUKU <span>Admin</span></h1>
+    <p>Chat platform management console</p>
+    <div class="flbl">Username</div>
+    <input class="ainput" id="lUser" placeholder="admin" autocomplete="off">
+    <div class="flbl">Password</div>
+    <input class="ainput" id="lPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="lerr" id="lErr">❌ Wrong credentials</div>
+    <button class="lbtn" onclick="doLogin()">Enter Panel →</button>
+    <div class="lmeta">v3.0 · MUKU-ADMIN</div>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <div class="sb" id="sb">
+    <div class="sb-logo">
+      <div class="sb-brand">MUKU Chat</div>
+      <div class="sb-sub">Admin Console</div>
+      <div class="sb-live"><div class="ldot"></div> LIVE</div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-lbl">Overview</div>
+      <div class="nav-item active" onclick="go('dashboard',this)"><span class="nav-ico">📊</span>Dashboard</div>
+      <div class="nav-item" onclick="go('users',this)"><span class="nav-ico">👥</span>Users<span class="nav-badge" id="nbUsers">0</span></div>
+      <div class="nav-item" onclick="go('online',this)"><span class="nav-ico">🟢</span>Online Users<span class="nav-badge gold" id="nbOnline">0</span></div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-lbl">Content</div>
+      <div class="nav-item" onclick="go('messages',this)"><span class="nav-ico">💬</span>Messages</div>
+      <div class="nav-item" onclick="go('files',this)"><span class="nav-ico">📁</span>Files & Media</div>
+      <div class="nav-item" onclick="go('activity',this)"><span class="nav-ico">📋</span>Activity Log</div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-lbl">Tools</div>
+      <div class="nav-item" onclick="go('broadcast',this)"><span class="nav-ico">📢</span>Broadcast</div>
+      <div class="nav-item" onclick="go('moderation',this)"><span class="nav-ico">🛡️</span>Moderation</div>
+      <div class="nav-item" onclick="go('banned',this)"><span class="nav-ico">🚫</span>Banned Users</div>
+      <div class="nav-item" onclick="go('health',this)"><span class="nav-ico">💻</span>System Health</div>
+    </div>
+    <div class="nav-sec">
+      <div class="nav-lbl">Config</div>
+      <div class="nav-item" onclick="go('settings',this)"><span class="nav-ico">⚙️</span>Settings</div>
+    </div>
+    <div class="sb-foot">
+      <div class="admin-chip">
+        <div class="achip-av">A</div>
+        <div><div class="achip-name" id="sbAdminNm">Admin</div><div class="achip-role">SUPERADMIN</div></div>
+        <button class="sb-logout" onclick="doLogout()" title="Logout">🚪</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-l">
+        <button class="mob-menu" onclick="openMobSb()">☰</button>
+        <div class="page-title" id="pageTitle">Dashboard</div>
+      </div>
+      <div class="topbar-r">
+        <div class="tb-conn"><div class="conn-dot" id="connDot"></div><span id="connLbl">Connected</span></div>
+        <div class="tb-clock" id="clock">--:--:--</div>
+        <button class="tbtn" onclick="exportCSV()">⬇ Export CSV</button>
+        <button class="tbtn" onclick="refreshAll()">⟳ Refresh</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ─── DASHBOARD ─── -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid">
+          <div class="sc gold"><div class="sc-icon">👥</div><div class="sc-val" id="sTotal">—</div><div class="sc-lbl">Total Users</div><div class="sc-sub" id="sTotalSub">—</div></div>
+          <div class="sc green"><div class="sc-icon">🟢</div><div class="sc-val" id="sOnline">—</div><div class="sc-lbl">Online Now</div><div class="sc-sub">live count</div><div class="sc-trend up" id="sTrend">↑</div></div>
+          <div class="sc blue"><div class="sc-icon">💬</div><div class="sc-val" id="sMsgs">—</div><div class="sc-lbl">Total Messages</div><div class="sc-sub">all convs</div></div>
+          <div class="sc purple"><div class="sc-icon">🗣️</div><div class="sc-val" id="sConvs">—</div><div class="sc-lbl">Conversations</div><div class="sc-sub">unique pairs</div></div>
+          <div class="sc orange"><div class="sc-icon">📁</div><div class="sc-val" id="sFiles">—</div><div class="sc-lbl">Files Shared</div><div class="sc-sub">img+audio+docs</div></div>
+          <div class="sc red"><div class="sc-icon">🚫</div><div class="sc-val" id="sBanned">—</div><div class="sc-lbl">Banned</div><div class="sc-sub">restricted users</div></div>
+          <div class="sc cyan"><div class="sc-icon">🎤</div><div class="sc-val" id="sVoice">—</div><div class="sc-lbl">Voice Messages</div><div class="sc-sub">audio sent</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          <div class="card">
+            <div class="card-head"><div class="card-title">👥 Recent <span>Users</span></div></div>
+            <div class="card-body" id="recentUsers" style="padding:0"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div class="card-title">💬 Recent <span>Messages</span></div></div>
+            <div class="card-body" id="recentMsgs" style="padding:0"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">📈 Message Activity <span>(Today — Hourly)</span></div>
+            <span style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace" id="chartTotal">0 msgs today</span>
+          </div>
+          <div class="card-body">
+            <div class="mbars" id="actChart"></div>
+            <div style="display:flex;justify-content:space-between;margin-top:4px">
+              <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">00:00</span>
+              <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">06:00</span>
+              <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">12:00</span>
+              <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">18:00</span>
+              <span style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">23:59</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div class="card-title">📊 Message Types <span>Breakdown</span></div></div>
+          <div class="card-body" id="msgTypeChart"></div>
+        </div>
+      </div>
+
+      <!-- ─── USERS ─── -->
+      <div class="page" id="page-users">
+        <div class="card">
+          <div class="toolbar">
+            <input class="tsearch" id="uSearch" placeholder="🔍 Search name or ID..." oninput="renderUsers()">
+            <select class="tselect" id="uFilter" onchange="renderUsers()">
+              <option value="all">All Users</option>
+              <option value="online">Online</option>
+              <option value="offline">Offline</option>
+            </select>
+            <select class="tselect" id="uSort" onchange="renderUsers()">
+              <option value="recent">Recently Joined</option>
+              <option value="msgs">Most Messages</option>
+              <option value="az">A → Z</option>
+            </select>
+            <button class="btn btn-r" onclick="confirmDeleteOffline()">🗑 Delete Offline</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr>
+                <th><input type="checkbox" id="chkAll" onchange="toggleAllRows(this)" class="row-check"></th>
+                <th>User</th><th>Status</th><th>Joined</th><th>Last Seen</th><th>Messages</th><th>Actions</th>
+              </tr></thead>
+              <tbody id="usersBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── ONLINE USERS ─── -->
+      <div class="page" id="page-online">
+        <div class="card">
+          <div class="card-head"><div class="card-title">🟢 Currently <span>Online</span></div><span class="badge bg" id="onlineCnt">0 users</span></div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>User</th><th>Since</th><th>Messages Sent</th><th>Actions</th></tr></thead>
+              <tbody id="onlineBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── MESSAGES ─── -->
+      <div class="page" id="page-messages">
+        <div class="toolbar" style="background:var(--s1);border:1px solid var(--border);border-radius:12px;margin-bottom:14px">
+          <input class="tsearch" id="mSearch" placeholder="🔍 Search by username or message..." oninput="renderConvs()">
+          <button class="btn btn-r" onclick="confirmNuke('messages')">🗑 Delete All</button>
+        </div>
+        <div id="convList"></div>
+      </div>
+
+      <!-- ─── FILES ─── -->
+      <div class="page" id="page-files">
+        <div class="card">
+          <div class="toolbar">
+            <input class="tsearch" id="fSearch" placeholder="🔍 Search files..." oninput="renderFiles()">
+            <select class="tselect" id="fFilter" onchange="renderFiles()">
+              <option value="all">All Types</option>
+              <option value="image">🖼 Images</option>
+              <option value="audio">🎤 Audio</option>
+              <option value="file">📄 Files</option>
+            </select>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Type</th><th>Filename</th><th>Sent By</th><th>Time</th><th>Actions</th></tr></thead>
+              <tbody id="filesBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── ACTIVITY LOG ─── -->
+      <div class="page" id="page-activity">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px">📋 Activity <span style="color:var(--gold)">Log</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select class="tselect" id="aFilter" onchange="renderActivity()">
+              <option value="all">All Events</option>
+              <option value="join">Joins</option>
+              <option value="message">Messages</option>
+              <option value="ban">Bans</option>
+              <option value="delete">Deletions</option>
+              <option value="bulk">Bulk Actions</option>
+            </select>
+            <button class="btn btn-r" onclick="confirmNuke('adminLog')">🗑 Clear Log</button>
+          </div>
+        </div>
+        <div class="card"><div class="alist" id="actList"></div></div>
+      </div>
+
+      <!-- ─── BROADCAST ─── -->
+      <div class="page" id="page-broadcast">
+        <div class="bc-card">
+          <h3>📢 Send Broadcast</h3>
+          <div class="bc-type-row">
+            <div class="bc-type sel" onclick="setBcType(this,'info')">ℹ️ Info</div>
+            <div class="bc-type" onclick="setBcType(this,'warning')">⚠️ Warning</div>
+            <div class="bc-type" onclick="setBcType(this,'update')">🚀 Update</div>
+            <div class="bc-type" onclick="setBcType(this,'promo')">🎁 Promo</div>
+            <div class="bc-type" onclick="setBcType(this,'alert')">🔔 Alert</div>
+          </div>
+          <textarea class="bc-ta" id="bcText" placeholder="Sabhi users ko message likho..."></textarea>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button class="btn-primary" onclick="sendBroadcast()">📤 Send to All</button>
+            <span id="bcStatus" style="font-size:12px;color:var(--muted)"></span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">📜 Broadcast <span>History</span></div></div>
+          <div class="card-body" id="bcHistory" style="padding:0"></div>
+        </div>
+      </div>
+
+      <!-- ─── MODERATION ─── -->
+      <div class="page" id="page-moderation">
+        <div class="card" style="margin-bottom:18px">
+          <div class="card-head"><div class="card-title">🛡️ Keyword <span>Filter</span></div></div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--sub);margin-bottom:14px">In keywords wale messages automatically flag ho jayenge activity log mein.</p>
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+              <input class="tsearch" id="kwInput" placeholder="Keyword daalo..." style="max-width:240px" onkeydown="if(event.key==='Enter')addKeyword()">
+              <button class="btn-primary" onclick="addKeyword()">+ Add</button>
+            </div>
+            <div class="kw-list" id="kwList"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">⚠️ Flagged <span>Messages</span></div></div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Message</th><th>From</th><th>Keyword</th><th>Time</th><th>Actions</th></tr></thead>
+              <tbody id="flaggedBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── BANNED ─── -->
+      <div class="page" id="page-banned">
+        <div class="card">
+          <div class="toolbar">
+            <input class="tsearch" id="bSearch" placeholder="🔍 Search banned users..." oninput="renderBanned()">
+            <button class="btn btn-r" onclick="confirmNukeAllBanned()">🗑 Delete All Banned</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>User</th><th>Banned On</th><th>Banned By</th><th>Actions</th></tr></thead>
+              <tbody id="bannedBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── SYSTEM HEALTH ─── -->
+      <div class="page" id="page-health">
+        <div class="health-grid" id="healthGrid"></div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">📊 Usage <span>Stats</span></div></div>
+          <div class="card-body" id="healthStats"></div>
+        </div>
+      </div>
+
+      <!-- ─── SETTINGS ─── -->
+      <div class="page" id="page-settings">
+        <div class="sg">
+          <div class="scard">
+            <h3>🔐 Admin Password</h3>
+            <div class="flbl" style="margin-bottom:6px">New Password</div>
+            <input class="ainput" id="np1" type="password" placeholder="New password" style="margin-bottom:10px">
+            <div class="flbl" style="margin-bottom:6px">Confirm Password</div>
+            <input class="ainput" id="np2" type="password" placeholder="Confirm new password" style="margin-bottom:10px">
+            <button class="btn-primary" onclick="changePass()">💾 Save Password</button>
+          </div>
+          <div class="scard">
+            <h3>⚙️ Platform Controls</h3>
+            <div class="srow"><div><div class="slbl">New Registrations</div><div class="ssub">Naye users ko join karne do</div></div><label class="tog"><input type="checkbox" id="togReg" checked onchange="saveSetting('allowRegistration',this.checked)"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+            <div class="srow"><div><div class="slbl">Maintenance Mode</div><div class="ssub">Sabhi chat activity band karo</div></div><label class="tog"><input type="checkbox" id="togMaint" onchange="saveSetting('maintenanceMode',this.checked)"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+            <div class="srow"><div><div class="slbl">File Uploads</div><div class="ssub">Users file share kar sakein</div></div><label class="tog"><input type="checkbox" id="togFiles" checked onchange="saveSetting('allowFiles',this.checked)"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+            <div class="srow"><div><div class="slbl">Video Calls</div><div class="ssub">P2P video calling allow karo</div></div><label class="tog"><input type="checkbox" id="togVideo" checked onchange="saveSetting('allowVideo',this.checked)"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+            <div class="srow"><div><div class="slbl">Voice Messages</div><div class="ssub">Audio messages allow karo</div></div><label class="tog"><input type="checkbox" id="togVoice" checked onchange="saveSetting('allowVoice',this.checked)"><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+          </div>
+          <div class="scard">
+            <h3>🗄️ Database Actions</h3>
+            <div class="srow"><div><div class="slbl">Delete All Messages</div><div class="ssub">Poora messages node wipe karo</div></div><button class="btn btn-r" onclick="confirmNuke('messages')">Delete</button></div>
+            <div class="srow"><div><div class="slbl">Delete Offline Users</div><div class="ssub">Inactive accounts remove karo</div></div><button class="btn btn-r" onclick="confirmDeleteOffline()">Delete</button></div>
+            <div class="srow"><div><div class="slbl">Clear Activity Log</div><div class="ssub">Sabhi admin logs delete karo</div></div><button class="btn btn-o" onclick="confirmNuke('adminLog')">Clear</button></div>
+            <div class="srow"><div><div class="slbl">Clear Broadcasts</div><div class="ssub">Broadcast history delete karo</div></div><button class="btn btn-o" onclick="confirmNuke('broadcasts')">Clear</button></div>
+          </div>
+          <div class="scard">
+            <h3>ℹ️ System Info</h3>
+            <div class="srow"><div class="slbl">Firebase Project</div><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold)" id="sProjectId">—</span></div>
+            <div class="srow"><div class="slbl">Admin Panel</div><span class="badge bgd">v3.0</span></div>
+            <div class="srow"><div class="slbl">Build</div><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">MUKU-ADMIN-2025</span></div>
+            <div class="srow"><div class="slbl">Connection</div><span class="badge bg" id="sConn">Connected</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- BULK ACTION BAR -->
+<div class="bulk-bar" id="bulkBar">
+  <span class="bulk-lbl" id="bulkLbl">0 selected</span>
+  <button class="btn btn-r" onclick="bulkBan()">🚫 Ban</button>
+  <button class="btn btn-r" onclick="bulkDelete()">🗑 Delete</button>
+  <button class="btn btn-o" onclick="clearBulk()">✕ Clear</button>
+</div>
+
+<script>
+// ══════════════════════════
+//  FIREBASE INIT
+// ══════════════════════════
+let db, storage;
+try { firebase.initializeApp(firebaseConfig); } catch(e) {}
+db = firebase.database();
+storage = firebase.storage();
+const usersRef = db.ref('users');
+
+// ══════════════════════════
+//  STATE
+// ══════════════════════════
+let allUsers={}, allMsgs={}, logEntries=[], broadcasts=[], keywords=[];
+let adminPass = localStorage.getItem('mukuAdminPass') || ADMIN_PASS;
+let cfmPending = null;
+let selectedRows = new Set();
+let bcType = 'info';
+
+// ══════════════════════════
+//  LOGIN
+// ══════════════════════════
 function doLogin() {
-    const u = document.getElementById('loginUser').value.trim();
-    const p = document.getElementById('loginPass').value;
-    if (u === ADMIN_CREDENTIALS.username && p === adminPass) {
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('app').classList.add('show');
-        initAdmin();
-    } else {
-        const err = document.getElementById('loginError');
-        err.style.display = 'block';
-        setTimeout(() => err.style.display = 'none', 3000);
-    }
+  const u = $('lUser').value.trim();
+  const p = $('lPass').value;
+  if (u === ADMIN_USER && p === adminPass) {
+    $('loginScreen').style.display = 'none';
+    $('app').classList.add('on');
+    $('sbAdminNm').textContent = u;
+    initAdmin();
+  } else {
+    const e = $('lErr'); e.style.display='block';
+    setTimeout(() => e.style.display='none', 3000);
+  }
 }
-document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+$('lPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
-function adminLogout() {
-    document.getElementById('app').classList.remove('show');
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('loginPass').value = '';
+function doLogout() {
+  $('app').classList.remove('on');
+  $('loginScreen').style.display='flex';
+  $('lPass').value='';
 }
 
-// ========== INIT ==========
+// ══════════════════════════
+//  INIT
+// ══════════════════════════
 function initAdmin() {
-    startClock();
-    loadSettings();
-    loadAllData();
-    document.getElementById('settingProjectId').textContent = firebaseConfig.projectId;
+  startClock();
+  $('sProjectId').textContent = firebaseConfig.projectId;
+  loadSettings();
+  loadKeywords();
+
+  db.ref('.info/connected').on('value', s => {
+    const on = s.val();
+    $('connDot').className = 'conn-dot' + (on?'':' off');
+    $('connLbl').textContent = on ? 'Connected' : 'Offline';
+    $('sConn').textContent = on ? 'Connected' : 'Offline';
+    $('sConn').className = 'badge ' + (on?'bg':'br');
+  });
+
+  usersRef.on('value', snap => {
+    allUsers = snap.val() || {};
+    refreshStats();
+    renderUsers(); renderBanned(); renderOnline();
+    updateRecentUsers();
+    $('nbUsers').textContent = Object.keys(allUsers).length;
+    $('nbOnline').textContent = Object.values(allUsers).filter(u=>u.status==='online').length;
+  });
+
+  db.ref('messages').on('value', snap => {
+    allMsgs = snap.val() || {};
+    refreshStats();
+    renderConvs(); renderFiles();
+    updateRecentMsgs();
+    buildChart();
+    buildTypeChart();
+    runModeration();
+    updateHealth();
+  });
+
+  db.ref('adminLog').on('value', snap => {
+    logEntries = Object.values(snap.val()||{}).sort((a,b)=>b.timestamp-a.timestamp);
+    renderActivity();
+  });
+
+  db.ref('broadcasts').on('value', snap => {
+    broadcasts = Object.values(snap.val()||{}).sort((a,b)=>b.timestamp-a.timestamp);
+    renderBcHistory();
+  });
+
+  db.ref('adminSettings').on('value', snap => {
+    const s = snap.val()||{};
+    const map = {allowRegistration:'togReg',maintenanceMode:'togMaint',allowFiles:'togFiles',allowVideo:'togVideo',allowVoice:'togVoice'};
+    Object.entries(map).forEach(([k,id]) => { const el=$(id); if(el&&s[k]!==undefined) el.checked=s[k]; });
+  });
 }
 
-function loadAllData() {
-    // Users - live
-    db.ref('users').on('value', snap => {
-        allUsers = snap.val() || {};
-        refreshStats();
-        renderUsers();
-        renderBanned();
-        document.getElementById('navUserBadge').textContent = Object.keys(allUsers).length;
-        updateRecentUsers();
-    });
-
-    // Messages - live
-    db.ref('messages').on('value', snap => {
-        allMessages = snap.val() || {};
-        refreshStats();
-        renderConversations();
-        renderFiles();
-        updateRecentMessages();
-        buildActivityChart();
-    });
-
-    // Activity log
-    db.ref('adminLog').on('value', snap => {
-        const raw = snap.val() || {};
-        activityLog = Object.values(raw).sort((a,b) => b.timestamp - a.timestamp);
-        renderActivity();
-    });
-
-    // Broadcasts
-    db.ref('broadcasts').on('value', snap => {
-        allBroadcasts = Object.values(snap.val() || {}).sort((a,b) => b.timestamp - a.timestamp);
-        renderBroadcastHistory();
-    });
-
-    // Settings
-    db.ref('adminSettings').on('value', snap => {
-        const s = snap.val() || {};
-        const map = { allowRegistration:'toggleReg', maintenanceMode:'toggleMaint', allowFiles:'toggleFiles', allowVideo:'toggleVideo' };
-        Object.entries(map).forEach(([k,id]) => {
-            const el = document.getElementById(id);
-            if (el && s[k] !== undefined) el.checked = s[k];
-        });
-    });
-}
-
-// ========== STATS ==========
+// ══════════════════════════
+//  STATS
+// ══════════════════════════
 function refreshStats() {
-    const users = Object.values(allUsers);
-    const online = users.filter(u => u.status === 'online').length;
-    const banned = users.filter(u => u.banned).length;
-    document.getElementById('statTotal').textContent = users.length;
-    document.getElementById('statTotalSub').textContent = `${banned} banned`;
-    document.getElementById('statOnline').textContent = online;
-    document.getElementById('statOnlineSub').textContent = `${users.length - online} offline`;
+  const ua = Object.values(allUsers);
+  const online = ua.filter(u=>u.status==='online').length;
+  const banned = ua.filter(u=>u.banned).length;
+  $('sTotal').textContent = ua.length;
+  $('sTotalSub').textContent = banned + ' banned';
+  $('sOnline').textContent = online;
+  $('sTrend').textContent = online > 0 ? '↑ ' + online : '↓ 0';
+  $('sBanned').textContent = banned;
 
-    const convs = Object.keys(allMessages);
-    let totalMsgs = 0, totalFiles = 0;
-    convs.forEach(cid => {
-        const msgs = Object.values(allMessages[cid] || {});
-        totalMsgs += msgs.length;
-        totalFiles += msgs.filter(m => m.type === 'image' || m.type === 'file' || m.type === 'audio').length;
-    });
-    document.getElementById('statMessages').textContent = totalMsgs;
-    document.getElementById('statConvs').textContent = convs.length;
-    document.getElementById('statBanned').textContent = banned;
-    document.getElementById('statFiles').textContent = totalFiles;
+  let totalMsgs=0, totalFiles=0, voiceMsgs=0;
+  const convs = Object.values(allMsgs);
+  convs.forEach(c => {
+    const ms = Object.values(c||{});
+    totalMsgs += ms.length;
+    totalFiles += ms.filter(m=>m.type==='image'||m.type==='file').length;
+    voiceMsgs += ms.filter(m=>m.type==='audio').length;
+  });
+  $('sMsgs').textContent = totalMsgs;
+  $('sConvs').textContent = convs.length;
+  $('sFiles').textContent = totalFiles;
+  $('sVoice').textContent = voiceMsgs;
 }
 
 function updateRecentUsers() {
-    const el = document.getElementById('recentUsers');
-    const recent = Object.entries(allUsers)
-        .sort((a,b) => (b[1].createdAt||0) - (a[1].createdAt||0))
-        .slice(0,5);
-    if (!recent.length) { el.innerHTML = '<div class="empty-state"><p>No users yet</p></div>'; return; }
-    el.innerHTML = recent.map(([id,u]) => `
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-            <div class="td-avatar">${(u.avatar||'?')}</div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:13px;font-weight:600;">${esc(u.username)}</div>
-                <div style="font-size:10px;color:var(--text-muted);">${timeAgo(u.createdAt)}</div>
-            </div>
-            <div class="badge ${u.status==='online'?'badge-green':'badge-gray'}">${u.status==='online'?'🟢 Online':'⚫ Offline'}</div>
-        </div>
-    `).join('');
+  const el = $('recentUsers');
+  const recent = Object.entries(allUsers).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0)).slice(0,6);
+  if (!recent.length) { el.innerHTML='<div class="empty"><p>No users</p></div>'; return; }
+  el.innerHTML = recent.map(([id,u])=>`
+    <div style="display:flex;align-items:center;gap:9px;padding:9px 16px;border-bottom:1px solid var(--border)">
+      <div class="uav">${esc(u.avatar||'?')}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600">${esc(u.username)}</div>
+        <div style="font-size:10px;color:var(--muted)">${timeAgo(u.createdAt)}</div>
+      </div>
+      <span class="badge ${u.status==='online'?'bg':'bk'}">${u.status==='online'?'🟢 Online':'⚫ Offline'}</span>
+    </div>
+  `).join('');
 }
 
-function updateRecentMessages() {
-    const el = document.getElementById('recentMessages');
-    const all = [];
-    Object.entries(allMessages).forEach(([cid, msgs]) => {
-        Object.values(msgs||{}).forEach(m => all.push(m));
-    });
-    const recent = all.sort((a,b) => b.timestamp - a.timestamp).slice(0,5);
-    if (!recent.length) { el.innerHTML = '<div class="empty-state"><p>No messages yet</p></div>'; return; }
-    el.innerHTML = recent.map(m => `
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
-            <div style="font-size:12px;font-weight:600;color:var(--gold);">${esc(m.fromName||'?')}</div>
-            <div style="font-size:12px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                ${m.type!=='text'?`[${m.type}]`:esc(m.text||'')}
-            </div>
-            <div style="font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">${timeAgo(m.timestamp)}</div>
-        </div>
-    `).join('');
+function updateRecentMsgs() {
+  const el = $('recentMsgs');
+  const all=[];
+  Object.values(allMsgs).forEach(c=>Object.values(c||{}).forEach(m=>all.push(m)));
+  const recent = all.sort((a,b)=>b.timestamp-a.timestamp).slice(0,6);
+  if (!recent.length) { el.innerHTML='<div class="empty"><p>No messages</p></div>'; return; }
+  el.innerHTML = recent.map(m=>`
+    <div style="padding:9px 16px;border-bottom:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:600;color:var(--gold)">${esc(m.fromName||'?')}</div>
+      <div style="font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.type!=='text'?'['+m.type+']':esc(m.text||'')}</div>
+      <div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace">${timeAgo(m.timestamp)}</div>
+    </div>
+  `).join('');
 }
 
-function buildActivityChart() {
-    const el = document.getElementById('activityChart');
-    const now = Date.now();
-    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-    const buckets = Array(24).fill(0);
-    Object.values(allMessages).forEach(conv => {
-        Object.values(conv||{}).forEach(m => {
-            if (m.timestamp >= todayStart.getTime()) {
-                const h = new Date(m.timestamp).getHours();
-                buckets[h]++;
-            }
-        });
-    });
-    const max = Math.max(...buckets, 1);
-    el.innerHTML = buckets.map((v,i) => {
-        const pct = Math.max(4, Math.round((v/max)*100));
-        const colors = ['#d4a843','#a07820','#f0c866'];
-        const color = colors[i%3];
-        return `<div class="mini-bar" style="height:${pct}%;background:${color};opacity:${v?0.8:0.15};" data-val="${v} msgs" title="${i}:00 — ${v} msgs"></div>`;
-    }).join('');
+function buildChart() {
+  const el = $('actChart');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const buckets = Array(24).fill(0);
+  let todayTotal = 0;
+  Object.values(allMsgs).forEach(c=>Object.values(c||{}).forEach(m=>{
+    if (m.timestamp >= today.getTime()) {
+      buckets[new Date(m.timestamp).getHours()]++;
+      todayTotal++;
+    }
+  }));
+  const max = Math.max(...buckets, 1);
+  const colors = ['#d4a843','#a07820','#f0c866'];
+  el.innerHTML = buckets.map((v,i)=>`
+    <div class="mbar" style="height:${Math.max(3,Math.round((v/max)*100))}%;background:${colors[i%3]};opacity:${v?0.75:0.12}" data-v="${v}"></div>
+  `).join('');
+  $('chartTotal').textContent = todayTotal + ' msgs today';
 }
 
-// ========== USERS PAGE ==========
+function buildTypeChart() {
+  const el = $('msgTypeChart');
+  const counts = {text:0,image:0,audio:0,file:0,location:0,sticker:0};
+  Object.values(allMsgs).forEach(c=>Object.values(c||{}).forEach(m=>{
+    const t=m.type||'text';
+    if(counts[t]!==undefined) counts[t]++;
+  }));
+  const total = Object.values(counts).reduce((a,b)=>a+b,1);
+  const colors = {text:'#d4a843',image:'#a855f7',audio:'#3b82f6',file:'#f97316',location:'#22c55e',sticker:'#ef4444'};
+  const icons = {text:'💬',image:'🖼️',audio:'🎤',file:'📄',location:'📍',sticker:'🎭'};
+  el.innerHTML = Object.entries(counts).map(([type,n])=>`
+    <div class="hbar-row">
+      <div class="hbar-lbl">${icons[type]} ${type}</div>
+      <div class="hbar-track"><div class="hbar-fill" style="width:${Math.round(n/total*100)}%;background:${colors[type]}"></div></div>
+      <div class="hbar-val">${n}</div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════
+//  USERS PAGE
+// ══════════════════════════
 function renderUsers() {
-    const tbody = document.getElementById('usersTableBody');
-    const search = document.getElementById('userSearch').value.toLowerCase();
-    const filter = document.getElementById('userFilter').value;
-    let rows = Object.entries(allUsers).filter(([id,u]) => {
-        if (u.banned) return false;
-        if (search && !u.username?.toLowerCase().includes(search) && !id.includes(search)) return false;
-        if (filter === 'online' && u.status !== 'online') return false;
-        if (filter === 'offline' && u.status === 'online') return false;
-        return true;
-    });
-    if (!rows.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">👥</div><p>No users found</p></div></td></tr>`; return; }
-    // Count messages per user
-    const msgCount = {};
-    Object.values(allMessages).forEach(conv => {
-        Object.values(conv||{}).forEach(m => {
-            msgCount[m.fromId] = (msgCount[m.fromId]||0)+1;
-        });
-    });
-    tbody.innerHTML = rows.map(([id,u]) => `
-        <tr>
-            <td>
-                <div class="user-cell">
-                    <div class="td-avatar">${u.avatar||'?'}</div>
-                    <div class="user-cell-info">
-                        <div class="name">${esc(u.username)}</div>
-                        <div class="uid">${id.substring(0,20)}...</div>
-                    </div>
-                </div>
-            </td>
-            <td><span class="badge ${u.status==='online'?'badge-green':'badge-gray'}">${u.status==='online'?'🟢 Online':'⚫ Offline'}</span></td>
-            <td style="font-size:12px;color:var(--text-sub);">${formatDateTime(u.createdAt)}</td>
-            <td style="font-size:12px;color:var(--text-sub);">${u.status==='online'?'<span style="color:var(--green)">Active now</span>':timeAgo(u.lastSeen)}</td>
-            <td><span class="badge badge-blue">${msgCount[id]||0} msgs</span></td>
-            <td>
-                <div class="action-btns">
-                    <button class="btn-sm btn-warning" onclick="banUser('${id}','${esc(u.username)}')">🚫 Ban</button>
-                    <button class="btn-sm btn-blue" onclick="viewUserMsgs('${id}','${esc(u.username)}')">💬 Msgs</button>
-                    <button class="btn-sm btn-danger" onclick="deleteUser('${id}','${esc(u.username)}')">🗑 Delete</button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+  const tbody = $('usersBody');
+  const search = $('uSearch').value.toLowerCase();
+  const filter = $('uFilter').value;
+  const sort   = $('uSort').value;
+
+  const msgCnt = {};
+  Object.values(allMsgs).forEach(c=>Object.values(c||{}).forEach(m=>{ msgCnt[m.fromId]=(msgCnt[m.fromId]||0)+1; }));
+
+  let rows = Object.entries(allUsers).filter(([id,u])=>{
+    if (u.banned) return false;
+    if (search && !u.username?.toLowerCase().includes(search) && !id.includes(search)) return false;
+    if (filter==='online' && u.status!=='online') return false;
+    if (filter==='offline' && u.status==='online') return false;
+    return true;
+  });
+
+  if (sort==='msgs') rows.sort((a,b)=>(msgCnt[b[0]]||0)-(msgCnt[a[0]]||0));
+  else if (sort==='az') rows.sort((a,b)=>a[1].username?.localeCompare(b[1].username));
+  else rows.sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
+
+  if (!rows.length) { tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-ico">👥</div><p>No users</p></div></td></tr>`; return; }
+
+  tbody.innerHTML = rows.map(([id,u])=>`
+    <tr class="${selectedRows.has(id)?'selected':''}">
+      <td><input type="checkbox" class="row-check" ${selectedRows.has(id)?'checked':''} onchange="toggleRow('${id}',this.checked)"></td>
+      <td><div class="ucell"><div class="uav">${esc(u.avatar||'?')}</div><div class="uinfo"><div class="uname">${esc(u.username)}</div><div class="uid">${id.substring(0,18)}...</div></div></div></td>
+      <td><span class="badge ${u.status==='online'?'bg':'bk'}">${u.status==='online'?'🟢 Online':'⚫ Offline'}</span></td>
+      <td style="font-size:12px;color:var(--sub)">${fmtDT(u.createdAt)}</td>
+      <td style="font-size:12px;color:var(--sub)">${u.status==='online'?'<span style="color:var(--green)">Active now</span>':timeAgo(u.lastSeen)}</td>
+      <td><span class="badge bb">${msgCnt[id]||0}</span></td>
+      <td><div class="acts">
+        <button class="btn btn-b" onclick="viewProfile('${id}')">👤 Profile</button>
+        <button class="btn btn-o" onclick="banUser('${id}','${esc(u.username)}')">🚫 Ban</button>
+        <button class="btn btn-r" onclick="deleteUser('${id}','${esc(u.username)}')">🗑 Del</button>
+      </div></td>
+    </tr>
+  `).join('');
 }
 
-function banUser(uid, name) {
-    openModal(`Ban User: ${name}`, `"${name}" ko ban karne se woh chat nahi kar payega. Are you sure?`, () => {
-        db.ref('users').child(uid).update({ banned: true, bannedAt: Date.now() });
-        addLog('ban', `User <strong>${name}</strong> ko ban kiya gaya`, 'badge-red');
-        toast(`${name} banned`, 'error');
-    });
+function toggleRow(id, checked) {
+  checked ? selectedRows.add(id) : selectedRows.delete(id);
+  updateBulkBar();
+  renderUsers();
+}
+function toggleAllRows(chk) {
+  const rows = Object.entries(allUsers).filter(([,u])=>!u.banned);
+  rows.forEach(([id])=>{ chk.checked ? selectedRows.add(id) : selectedRows.delete(id); });
+  updateBulkBar(); renderUsers();
+}
+function updateBulkBar() {
+  const n = selectedRows.size;
+  $('bulkBar').className = 'bulk-bar' + (n>0?' on':'');
+  $('bulkLbl').textContent = n + ' selected';
+}
+function clearBulk() { selectedRows.clear(); updateBulkBar(); renderUsers(); }
+function bulkBan() {
+  if (!selectedRows.size) return;
+  confirm2('Ban ' + selectedRows.size + ' Users', 'Selected users ban ho jayenge.', ()=>{
+    selectedRows.forEach(id=>{ db.ref('users').child(id).update({banned:true,bannedAt:Date.now()}); });
+    addLog('bulk','<strong>'+selectedRows.size+'</strong> users ban kiye gaye','bo');
+    toast(selectedRows.size+' users banned','err');
+    clearBulk();
+  });
+}
+function bulkDelete() {
+  if (!selectedRows.size) return;
+  confirm2('Delete ' + selectedRows.size + ' Users', 'Permanently delete ho jayenge!', ()=>{
+    selectedRows.forEach(id=>db.ref('users').child(id).remove());
+    addLog('bulk','<strong>'+selectedRows.size+'</strong> users delete kiye gaye','bo');
+    toast(selectedRows.size+' users deleted');
+    clearBulk();
+  });
 }
 
-function deleteUser(uid, name) {
-    openModal(`Delete User: ${name}`, `"${name}" ka account permanently delete hoga. Yeh undo nahi ho sakta.`, () => {
-        db.ref('users').child(uid).remove();
-        addLog('delete', `User <strong>${name}</strong> delete kiya gaya`, 'badge-red');
-        toast(`${name} deleted`, 'error');
-    });
+function banUser(id,name) {
+  confirm2('Ban: '+name,'User ban ho jayega.',()=>{
+    db.ref('users').child(id).update({banned:true,bannedAt:Date.now(),bannedBy:'admin'});
+    addLog('ban','User <strong>'+name+'</strong> ban kiya','br');
+    toast(name+' banned','err');
+  });
+}
+function deleteUser(id,name) {
+  confirm2('Delete: '+name,'Permanently delete hoga!',()=>{
+    db.ref('users').child(id).remove();
+    addLog('delete','User <strong>'+name+'</strong> delete kiya','br');
+    toast(name+' deleted');
+  });
+}
+function confirmDeleteOffline() {
+  const off = Object.entries(allUsers).filter(([,u])=>u.status!=='online'&&!u.banned);
+  confirm2('Delete '+off.length+' Offline Users','Sabhi offline users delete ho jayenge.',()=>{
+    off.forEach(([id])=>db.ref('users').child(id).remove());
+    addLog('bulk',off.length+' offline users delete kiye gaye','br');
+    toast(off.length+' users deleted');
+  });
 }
 
-function viewUserMsgs(uid, name) {
-    switchPage('messages', document.querySelector('.nav-item:nth-child(1)'));
-    setTimeout(() => {
-        document.getElementById('msgSearch').value = name;
-        renderConversations();
-    }, 100);
+// ── User Profile ──
+function viewProfile(uid) {
+  const u = allUsers[uid]; if(!u) return;
+  const msgCnt = {};
+  Object.values(allMsgs).forEach(c=>Object.values(c||{}).forEach(m=>{ msgCnt[m.fromId]=(msgCnt[m.fromId]||0)+1; }));
+
+  // Find user's conversations
+  const userConvs = Object.entries(allMsgs).filter(([cid])=>cid.includes(uid));
+  const msgList = [];
+  userConvs.forEach(([,c])=>Object.values(c||{}).filter(m=>m.fromId===uid).slice(-5).forEach(m=>msgList.push(m)));
+  msgList.sort((a,b)=>b.timestamp-a.timestamp);
+
+  $('profileContent').innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+      <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#d4a843,#a07820);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;font-family:'Syne',sans-serif;color:#000;border:2px solid var(--gold3)">${esc(u.avatar||'?')}</div>
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800">${esc(u.username)}</div>
+        <div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px">${uid}</div>
+        <div style="margin-top:6px"><span class="badge ${u.status==='online'?'bg':'bk'}">${u.status==='online'?'🟢 Online':'⚫ Offline'}</span></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--gold)">${msgCnt[uid]||0}</div>
+        <div style="font-size:11px;color:var(--sub)">Messages Sent</div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--blue)">${userConvs.length}</div>
+        <div style="font-size:11px;color:var(--sub)">Conversations</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.8px">Recent Messages</div>
+    ${msgList.length ? msgList.map(m=>`
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:6px">
+        <div style="font-size:12px;color:var(--text)">${m.type!=='text'?'['+m.type+']':esc(m.text||'')}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px;font-family:'JetBrains Mono',monospace">${fmtDT(m.timestamp)}</div>
+      </div>
+    `).join('') : '<div style="font-size:13px;color:var(--muted)">No messages yet</div>'}
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+      ${!u.banned?`<button class="btn btn-o" onclick="banUser('${uid}','${esc(u.username)}');closeProfile()">🚫 Ban User</button>`:`<button class="btn btn-gr" onclick="unbanUser('${uid}','${esc(u.username)}');closeProfile()">✅ Unban</button>`}
+      <button class="btn btn-r" onclick="deleteUser('${uid}','${esc(u.username)}');closeProfile()">🗑 Delete Account</button>
+    </div>
+  `;
+  $('profileOv').classList.add('on');
+}
+function closeProfile() { $('profileOv').classList.remove('on'); }
+
+// ══════════════════════════
+//  ONLINE USERS
+// ══════════════════════════
+function renderOnline() {
+  const tbody = $('onlineBody');
+  const msgCnt = {};
+  Object.values(allMsgs).forEach(c=>Object.values(c||{}).forEach(m=>{ msgCnt[m.fromId]=(msgCnt[m.fromId]||0)+1; }));
+  const online = Object.entries(allUsers).filter(([,u])=>u.status==='online');
+  $('onlineCnt').textContent = online.length + ' users';
+  if (!online.length) { tbody.innerHTML=`<tr><td colspan="4"><div class="empty"><div class="empty-ico">🟢</div><p>No one online right now</p></div></td></tr>`; return; }
+  tbody.innerHTML = online.map(([id,u])=>`
+    <tr>
+      <td><div class="ucell"><div class="uav">${esc(u.avatar||'?')}</div><div class="uinfo"><div class="uname">${esc(u.username)}</div><div class="uid">${id.substring(0,18)}...</div></div></div></td>
+      <td style="font-size:12px;color:var(--sub)">${timeAgo(u.updatedAt||u.lastSeen)}</td>
+      <td><span class="badge bb">${msgCnt[id]||0}</span></td>
+      <td><div class="acts">
+        <button class="btn btn-b" onclick="viewProfile('${id}')">👤</button>
+        <button class="btn btn-o" onclick="banUser('${id}','${esc(u.username)}')">🚫 Ban</button>
+      </div></td>
+    </tr>
+  `).join('');
 }
 
-function confirmDeleteAllOffline() {
-    const offline = Object.entries(allUsers).filter(([,u]) => u.status !== 'online' && !u.banned);
-    openModal(`Delete ${offline.length} Offline Users`, `Sabhi offline users (${offline.length}) delete ho jayenge. Confirm?`, () => {
-        offline.forEach(([id]) => db.ref('users').child(id).remove());
-        addLog('bulk', `${offline.length} offline users delete kiye gaye`, 'badge-red');
-        toast(`${offline.length} users deleted`);
-    });
-}
+// ══════════════════════════
+//  MESSAGES / CONVERSATIONS
+// ══════════════════════════
+function renderConvs() {
+  const el = $('convList');
+  const search = $('mSearch').value.toLowerCase();
+  const convs = Object.entries(allMsgs);
+  const filtered = search ? convs.filter(([cid,msgs])=>{
+    const names = Object.values(msgs||{}).map(m=>m.fromName||'').join(' ').toLowerCase();
+    return cid.includes(search) || names.includes(search) || Object.values(msgs||{}).some(m=>(m.text||'').toLowerCase().includes(search));
+  }) : convs;
 
-// ========== BANNED PAGE ==========
-function renderBanned() {
-    const tbody = document.getElementById('bannedTableBody');
-    const search = document.getElementById('bannedSearch')?.value.toLowerCase() || '';
-    const banned = Object.entries(allUsers).filter(([,u]) => u.banned);
-    const filtered = search ? banned.filter(([,u]) => u.username?.toLowerCase().includes(search)) : banned;
-    if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="icon">✅</div><p>No banned users</p></div></td></tr>`; return; }
-    tbody.innerHTML = filtered.map(([id,u]) => `
-        <tr>
-            <td>
-                <div class="user-cell">
-                    <div class="td-avatar" style="border-color:var(--red);color:var(--red);">${u.avatar||'?'}</div>
-                    <div class="user-cell-info">
-                        <div class="name">${esc(u.username)}</div>
-                        <div class="uid">${id.substring(0,20)}...</div>
-                    </div>
-                </div>
-            </td>
-            <td style="font-size:12px;">${formatDateTime(u.bannedAt)}</td>
-            <td><span class="badge badge-red">Banned</span></td>
-            <td>
-                <div class="action-btns">
-                    <button class="btn-sm btn-green" onclick="unbanUser('${id}','${esc(u.username)}')">✅ Unban</button>
-                    <button class="btn-sm btn-danger" onclick="deleteUser('${id}','${esc(u.username)}')">🗑 Delete</button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-}
-
-function unbanUser(uid, name) {
-    db.ref('users').child(uid).update({ banned: false, bannedAt: null });
-    addLog('unban', `User <strong>${name}</strong> ko unban kiya gaya`, 'badge-green');
-    toast(`${name} unbanned`, 'success');
-}
-
-// ========== MESSAGES PAGE ==========
-function renderConversations() {
-    const el = document.getElementById('convList');
-    const search = document.getElementById('msgSearch').value.toLowerCase();
-    const convs = Object.entries(allMessages);
-    const filtered = search ? convs.filter(([cid, msgs]) => {
-        const names = Object.values(msgs||{}).map(m => m.fromName||'').join(' ').toLowerCase();
-        return cid.includes(search) || names.includes(search);
-    }) : convs;
-    if (!filtered.length) { el.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>No conversations found</p></div>'; return; }
-    el.innerHTML = filtered.map(([cid, msgs]) => {
-        const msgArr = Object.values(msgs||{}).sort((a,b) => a.timestamp - b.timestamp);
-        const last = msgArr[msgArr.length-1];
-        const names = [...new Set(msgArr.map(m => m.fromName||'?'))].join(' ↔ ');
-        return `
-            <div class="conv-item" onclick="toggleConv('${cid}')">
-                <div class="conv-header">
-                    <div class="conv-users">💬 ${esc(names)}</div>
-                    <div class="info-row">
-                        <span class="badge badge-blue">${msgArr.length} msgs</span>
-                        <button class="btn-sm btn-danger" onclick="event.stopPropagation();deleteConversation('${cid}')">🗑</button>
-                    </div>
-                </div>
-                <div class="conv-preview">${last?(last.type!=='text'?`[${last.type}]`:esc(last.text||'')):'...'}</div>
-                <div class="conv-detail" id="detail_${cid}">
-                    <div class="conv-msgs-wrap" id="msgs_${cid}"></div>
-                </div>
-            </div>
-        `;
-    }).join('');
+  if (!filtered.length) { el.innerHTML='<div class="empty"><div class="empty-ico">💬</div><p>No conversations</p></div>'; return; }
+  el.innerHTML = filtered.map(([cid,msgs])=>{
+    const ma = Object.values(msgs||{}).sort((a,b)=>a.timestamp-b.timestamp);
+    const last = ma[ma.length-1];
+    const names = [...new Set(ma.map(m=>m.fromName||'?'))].join(' ↔ ');
+    return `
+      <div class="conv-item">
+        <div class="conv-hdr" onclick="toggleConv('${cid}')">
+          <div>
+            <div class="conv-nm">💬 ${esc(names)}</div>
+            <div class="conv-prev">${last?(last.type!=='text'?'['+last.type+']':esc(last.text||'')):'...'}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="badge bb">${ma.length}</span>
+            <button class="btn btn-r" onclick="event.stopPropagation();deleteConv('${cid}')">🗑</button>
+          </div>
+        </div>
+        <div class="conv-body" id="cb_${cid}">
+          <div class="cmsg-wrap" id="cw_${cid}"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function toggleConv(cid) {
-    const detail = document.getElementById(`detail_${cid}`);
-    detail.classList.toggle('open');
-    if (detail.classList.contains('open')) {
-        const msgs = Object.values(allMessages[cid]||{}).sort((a,b) => a.timestamp - b.timestamp);
-        document.getElementById(`msgs_${cid}`).innerHTML = msgs.map(m => `
-            <div class="conv-msg" style="align-self:${m.fromId===Object.keys(allUsers)[0]?'flex-end':'flex-start'}">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                    <span style="font-size:10px;color:var(--gold);font-weight:700;">${esc(m.fromName||'?')}</span>
-                    <button class="del-msg-btn" onclick="deleteMsg('${cid}','${m.id}')">🗑</button>
-                </div>
-                <div class="conv-msg-text">${m.type!=='text'?`[${m.type}]`:esc(m.text||'')}</div>
-                <div class="conv-msg-meta">${formatDateTime(m.timestamp)} ${m.read?'✓✓ Read':'✓ Sent'}</div>
-            </div>
-        `).join('');
-    }
-}
-
-function deleteMsg(cid, msgId) {
-    db.ref('messages').child(cid).child(msgId).remove();
-    addLog('delete', `Message ID <strong>${msgId.substring(0,10)}...</strong> delete kiya`, 'badge-red');
-    toast('Message deleted');
-}
-
-function deleteConversation(cid) {
-    openModal('Delete Conversation', `Is poori conversation ko delete karein?`, () => {
-        db.ref('messages').child(cid).remove();
-        addLog('delete', `Conversation <strong>${cid.substring(0,20)}...</strong> delete kiya`, 'badge-red');
-        toast('Conversation deleted', 'error');
-    });
-}
-
-function confirmDeleteAllMsgs() {
-    openModal('Delete ALL Messages', `Poore database ke sabhi messages delete ho jayenge. Yeh undo nahi ho sakta!`, () => {
-        db.ref('messages').remove();
-        addLog('bulk', 'Sabhi messages delete kiye gaye', 'badge-red');
-        toast('All messages deleted', 'error');
-    });
-}
-
-// ========== ACTIVITY ==========
-function addLog(type, text, badgeClass='badge-gold') {
-    db.ref('adminLog').push({ type, text, badgeClass, timestamp: Date.now() });
-}
-
-function renderActivity() {
-    const el = document.getElementById('activityList');
-    const filter = document.getElementById('activityFilter')?.value || 'all';
-    const filtered = filter === 'all' ? activityLog : activityLog.filter(l => l.type === filter);
-    if (!filtered.length) { el.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>No activity yet</p></div>'; return; }
-    const typeColors = { join:'var(--green)', message:'var(--blue)', leave:'var(--orange)', file:'var(--purple)', delete:'var(--red)', ban:'var(--red)', unban:'var(--green)', bulk:'var(--orange)', default:'var(--gold)' };
-    el.innerHTML = filtered.slice(0,100).map(log => `
-        <div class="activity-item">
-            <div class="activity-dot" style="background:${typeColors[log.type]||typeColors.default}"></div>
-            <div class="activity-body">
-                <div class="activity-text">${log.text}</div>
-                <div class="activity-time">${formatDateTime(log.timestamp)}</div>
-            </div>
-            <span class="badge ${log.badgeClass||'badge-gold'}">${log.type}</span>
+  const body = $('cb_'+cid);
+  body.classList.toggle('open');
+  if (body.classList.contains('open')) {
+    const msgs = Object.values(allMsgs[cid]||{}).sort((a,b)=>a.timestamp-b.timestamp);
+    $('cw_'+cid).innerHTML = msgs.map(m=>`
+      <div class="cmsg" style="align-self:${m.fromId===Object.keys(allUsers)[0]?'flex-end':'flex-start'}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span class="cmsg-from">${esc(m.fromName||'?')}</span>
+          <button class="cdel" onclick="deleteMsg('${cid}','${m.id}')">🗑</button>
         </div>
+        <div style="font-size:12px">${m.type!=='text'?'['+m.type+']':esc(m.text||'')}</div>
+        <div class="cmsg-time">${fmtDT(m.timestamp)} ${m.read?'✓✓':''}</div>
+      </div>
     `).join('');
+  }
 }
 
-function clearActivityLog() {
-    openModal('Clear Activity Log', 'Sabhi admin log entries delete ho jayenge.', () => {
-        db.ref('adminLog').remove();
-        toast('Activity log cleared');
-    });
+function deleteMsg(cid, mid) {
+  db.ref('messages').child(cid).child(mid).remove();
+  addLog('delete','Message <strong>'+mid.substring(0,10)+'...</strong> delete kiya','br');
+  toast('Message deleted');
+}
+function deleteConv(cid) {
+  confirm2('Delete Conversation','Poori conversation delete ho jayegi.',()=>{
+    db.ref('messages').child(cid).remove();
+    addLog('delete','Conversation delete kiya','br');
+    toast('Conversation deleted','err');
+  });
 }
 
-// ========== FILES ==========
+// ══════════════════════════
+//  FILES
+// ══════════════════════════
 function renderFiles() {
-    const tbody = document.getElementById('filesTableBody');
-    const search = document.getElementById('fileSearch')?.value.toLowerCase() || '';
-    const filter = document.getElementById('fileFilter')?.value || 'all';
-    const files = [];
-    Object.values(allMessages).forEach(conv => {
-        Object.values(conv||{}).forEach(m => {
-            if (m.type === 'image' || m.type === 'audio' || m.type === 'file') {
-                files.push(m);
-            }
-        });
-    });
-    const filtered = files.filter(m => {
-        if (filter !== 'all' && m.type !== filter) return false;
-        if (search && !(m.fileName||'').toLowerCase().includes(search) && !(m.fromName||'').toLowerCase().includes(search)) return false;
-        return true;
-    }).sort((a,b) => b.timestamp - a.timestamp);
-    if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="icon">📁</div><p>No files found</p></div></td></tr>`; return; }
-    const icons = { image:'🖼️', audio:'🎤', file:'📄' };
-    tbody.innerHTML = filtered.map(m => `
-        <tr>
-            <td><span class="badge ${m.type==='image'?'badge-purple':m.type==='audio'?'badge-blue':'badge-gold'}">${icons[m.type]||'📎'} ${m.type}</span></td>
-            <td style="max-width:200px;">
-                <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                    ${m.fileName ? esc(m.fileName) : '<span style="color:var(--text-muted)">Unnamed</span>'}
-                </div>
-                ${m.fileUrl?`<a href="${m.fileUrl}" target="_blank" style="font-size:10px;color:var(--gold);font-family:'JetBrains Mono',monospace;">Open ↗</a>`:''}
-            </td>
-            <td style="font-size:13px;">${esc(m.fromName||'?')}</td>
-            <td style="font-size:12px;color:var(--text-sub);">${formatDateTime(m.timestamp)}</td>
-            <td>
-                ${m.fileUrl?`<a href="${m.fileUrl}" target="_blank" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;">👁 View</a>`:''}
-            </td>
-        </tr>
-    `).join('');
+  const tbody = $('filesBody');
+  const search = $('fSearch').value.toLowerCase();
+  const filter = $('fFilter').value;
+  const files = [];
+  Object.values(allMsgs).forEach(c=>Object.values(c||{}).forEach(m=>{
+    if (['image','audio','file'].includes(m.type)) files.push(m);
+  }));
+  const filtered = files.filter(m=>{
+    if (filter!=='all' && m.type!==filter) return false;
+    if (search && !(m.fileName||'').toLowerCase().includes(search) && !(m.fromName||'').toLowerCase().includes(search)) return false;
+    return true;
+  }).sort((a,b)=>b.timestamp-a.timestamp);
+
+  if (!filtered.length) { tbody.innerHTML=`<tr><td colspan="5"><div class="empty"><div class="empty-ico">📁</div><p>No files</p></div></td></tr>`; return; }
+  const icons={image:'🖼️',audio:'🎤',file:'📄'};
+  const bcls={image:'bp',audio:'bb',file:'bgd'};
+  tbody.innerHTML = filtered.map(m=>`
+    <tr>
+      <td><span class="badge ${bcls[m.type]||'bk'}">${icons[m.type]||'📎'} ${m.type}</span></td>
+      <td style="max-width:200px">
+        <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.fileName?esc(m.fileName):'<span style="color:var(--muted)">unnamed</span>'}</div>
+        ${m.fileUrl?`<a href="${m.fileUrl}" target="_blank" style="font-size:10px;color:var(--gold);font-family:'JetBrains Mono',monospace">Open ↗</a>`:''}
+      </td>
+      <td style="font-size:13px">${esc(m.fromName||'?')}</td>
+      <td style="font-size:12px;color:var(--sub)">${fmtDT(m.timestamp)}</td>
+      <td>${m.fileUrl?`<a href="${m.fileUrl}" target="_blank" class="btn btn-b" style="text-decoration:none">👁 View</a>`:''}</td>
+    </tr>
+  `).join('');
 }
 
-// ========== BROADCAST ==========
+// ══════════════════════════
+//  ACTIVITY LOG
+// ══════════════════════════
+function addLog(type, text, badgeCls='bgd') {
+  db.ref('adminLog').push({ type, text, badgeCls, timestamp:Date.now() });
+}
+function renderActivity() {
+  const el = $('actList');
+  const filter = $('aFilter').value;
+  const filtered = filter==='all' ? logEntries : logEntries.filter(l=>l.type===filter);
+  if (!filtered.length) { el.innerHTML='<div class="empty"><div class="empty-ico">📋</div><p>No activity yet</p></div>'; return; }
+  const typeColors={join:'var(--green)',message:'var(--blue)',ban:'var(--red)',delete:'var(--red)',bulk:'var(--orange)',default:'var(--gold)'};
+  el.innerHTML = filtered.slice(0,200).map(l=>`
+    <div class="aitem">
+      <div class="adot" style="background:${typeColors[l.type]||typeColors.default}"></div>
+      <div class="abody">
+        <div class="atext">${l.text}</div>
+        <div class="atime">${fmtDT(l.timestamp)}</div>
+      </div>
+      <span class="badge ${l.badgeCls||'bgd'}">${l.type}</span>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════
+//  BROADCAST
+// ══════════════════════════
+let _bcType='info';
+function setBcType(el, type) {
+  _bcType = type;
+  document.querySelectorAll('.bc-type').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+}
 function sendBroadcast() {
-    const text = document.getElementById('broadcastText').value.trim();
-    if (!text) { toast('Message khali hai', 'error'); return; }
-    const ref = db.ref('broadcasts').push();
-    ref.set({ id: ref.key, text, timestamp: Date.now(), from: 'ADMIN', sentTo: Object.keys(allUsers).length });
-    document.getElementById('broadcastText').value = '';
-    document.getElementById('broadcastStatus').textContent = `✓ Sent to ${Object.keys(allUsers).length} users`;
-    addLog('message', `Broadcast bheja: <strong>"${text.substring(0,40)}..."</strong>`, 'badge-gold');
-    toast('Broadcast sent!', 'success');
-    setTimeout(() => document.getElementById('broadcastStatus').textContent = '', 4000);
+  const text = $('bcText').value.trim();
+  if (!text) { toast('Message khali hai','err'); return; }
+  const ref = db.ref('broadcasts').push();
+  ref.set({ id:ref.key, text, type:_bcType, timestamp:Date.now(), from:'ADMIN', sentTo:Object.keys(allUsers).length });
+  $('bcText').value='';
+  addLog('message','Broadcast bheja: <strong>"'+text.substring(0,35)+'..."</strong>','bgd');
+  toast('Broadcast sent to '+Object.keys(allUsers).length+' users','ok');
+  $('bcStatus').textContent='✓ Sent at '+new Date().toLocaleTimeString();
+  setTimeout(()=>$('bcStatus').textContent='',4000);
+}
+function renderBcHistory() {
+  const el = $('bcHistory');
+  if (!broadcasts.length) { el.innerHTML='<div class="empty" style="padding:24px"><p>No broadcasts yet</p></div>'; return; }
+  const typeIcons={info:'ℹ️',warning:'⚠️',update:'🚀',promo:'🎁',alert:'🔔'};
+  el.innerHTML = broadcasts.map(b=>`
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:flex-start">
+      <span style="font-size:20px;flex-shrink:0">${typeIcons[b.type]||'📢'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;margin-bottom:4px">${esc(b.text)}</div>
+        <div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace">${fmtDT(b.timestamp)} · ${b.sentTo||0} users · ${b.type||'info'}</div>
+      </div>
+      <button class="btn btn-r" onclick="db.ref('broadcasts').child('${b.id}').remove();toast('Deleted')">🗑</button>
+    </div>
+  `).join('');
 }
 
-function renderBroadcastHistory() {
-    const el = document.getElementById('broadcastHistory');
-    if (!allBroadcasts.length) { el.innerHTML = '<div class="empty-state"><div class="icon">📢</div><p>No broadcasts yet</p></div>'; return; }
-    el.innerHTML = allBroadcasts.map(b => `
-        <div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;gap:14px;align-items:flex-start;">
-            <div style="flex:1;">
-                <div style="font-size:14px;margin-bottom:4px;">${esc(b.text)}</div>
-                <div style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">${formatDateTime(b.timestamp)} · Sent to ${b.sentTo||0} users</div>
-            </div>
-            <button class="btn-sm btn-danger" onclick="deleteBroadcast('${b.id}')">🗑</button>
-        </div>
-    `).join('');
+// ══════════════════════════
+//  MODERATION
+// ══════════════════════════
+function loadKeywords() {
+  db.ref('adminSettings/keywords').once('value').then(s=>{
+    keywords = s.val() || [];
+    renderKeywords();
+    runModeration();
+  });
+}
+function addKeyword() {
+  const kw = $('kwInput').value.trim().toLowerCase();
+  if (!kw || keywords.includes(kw)) { toast('Already exists or empty','err'); return; }
+  keywords.push(kw);
+  db.ref('adminSettings/keywords').set(keywords);
+  $('kwInput').value='';
+  renderKeywords(); runModeration();
+  toast('Keyword added','ok');
+}
+function removeKeyword(kw) {
+  keywords = keywords.filter(k=>k!==kw);
+  db.ref('adminSettings/keywords').set(keywords);
+  renderKeywords(); runModeration();
+}
+function renderKeywords() {
+  $('kwList').innerHTML = keywords.length ?
+    keywords.map(k=>`<div class="kw-tag">${esc(k)}<button class="kw-x" onclick="removeKeyword('${k}')">✕</button></div>`).join('') :
+    '<span style="font-size:12px;color:var(--muted)">No keywords added</span>';
+}
+function runModeration() {
+  const tbody = $('flaggedBody');
+  if (!keywords.length) { tbody.innerHTML='<tr><td colspan="5"><div class="empty"><div class="empty-ico">🛡️</div><p>Add keywords to start flagging</p></div></td></tr>'; return; }
+  const flagged=[];
+  Object.entries(allMsgs).forEach(([cid,c])=>Object.values(c||{}).forEach(m=>{
+    if (m.type==='text') {
+      const hit = keywords.find(k=>(m.text||'').toLowerCase().includes(k));
+      if (hit) flagged.push({...m,cid,kw:hit});
+    }
+  }));
+  flagged.sort((a,b)=>b.timestamp-a.timestamp);
+  if (!flagged.length) { tbody.innerHTML='<tr><td colspan="5"><div class="empty"><div class="empty-ico">✅</div><p>No flagged messages</p></div></td></tr>'; return; }
+  tbody.innerHTML = flagged.slice(0,50).map(m=>`
+    <tr>
+      <td style="font-size:12px;max-width:200px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.text||'')}</div></td>
+      <td style="font-size:12px">${esc(m.fromName||'?')}</td>
+      <td><span class="badge br">${esc(m.kw)}</span></td>
+      <td style="font-size:11px;color:var(--sub);font-family:'JetBrains Mono',monospace">${fmtDT(m.timestamp)}</td>
+      <td><div class="acts">
+        <button class="btn btn-r" onclick="deleteMsg('${m.cid}','${m.id}')">🗑 Del</button>
+        <button class="btn btn-o" onclick="banUser('${m.fromId}','${esc(m.fromName)}')">🚫 Ban</button>
+      </div></td>
+    </tr>
+  `).join('');
 }
 
-function deleteBroadcast(id) {
-    db.ref('broadcasts').child(id).remove();
-    toast('Broadcast deleted');
+// ══════════════════════════
+//  BANNED
+// ══════════════════════════
+function renderBanned() {
+  const tbody = $('bannedBody');
+  const search = $('bSearch')?.value.toLowerCase()||'';
+  const banned = Object.entries(allUsers).filter(([,u])=>u.banned&&(!search||u.username?.toLowerCase().includes(search)));
+  if (!banned.length) { tbody.innerHTML=`<tr><td colspan="4"><div class="empty"><div class="empty-ico">✅</div><p>No banned users</p></div></td></tr>`; return; }
+  tbody.innerHTML = banned.map(([id,u])=>`
+    <tr>
+      <td><div class="ucell"><div class="uav" style="border-color:var(--red);color:var(--red)">${esc(u.avatar||'?')}</div><div class="uinfo"><div class="uname">${esc(u.username)}</div><div class="uid">${id.substring(0,18)}...</div></div></div></td>
+      <td style="font-size:12px;color:var(--sub)">${fmtDT(u.bannedAt)}</td>
+      <td style="font-size:12px;color:var(--sub)">${esc(u.bannedBy||'admin')}</td>
+      <td><div class="acts">
+        <button class="btn btn-gr" onclick="unbanUser('${id}','${esc(u.username)}')">✅ Unban</button>
+        <button class="btn btn-r" onclick="deleteUser('${id}','${esc(u.username)}')">🗑 Del</button>
+      </div></td>
+    </tr>
+  `).join('');
+}
+function unbanUser(id,name) {
+  db.ref('users').child(id).update({banned:false,bannedAt:null,bannedBy:null});
+  addLog('unban','User <strong>'+name+'</strong> unban kiya','bg');
+  toast(name+' unbanned','ok');
+}
+function confirmNukeAllBanned() {
+  const banned=Object.entries(allUsers).filter(([,u])=>u.banned);
+  confirm2('Delete All Banned ('+banned.length+')', 'All banned users permanently delete ho jayenge.',()=>{
+    banned.forEach(([id])=>db.ref('users').child(id).remove());
+    addLog('bulk',banned.length+' banned users delete kiye gaye','br');
+    toast(banned.length+' deleted');
+  });
 }
 
-// ========== SETTINGS ==========
-function saveSetting(key, val) {
-    db.ref('adminSettings').child(key).set(val);
-    toast(`Setting saved: ${key} = ${val}`, 'success');
+// ══════════════════════════
+//  SYSTEM HEALTH
+// ══════════════════════════
+function updateHealth() {
+  const ua=Object.values(allUsers);
+  const ma=[]; Object.values(allMsgs).forEach(c=>Object.values(c||{}).forEach(m=>ma.push(m)));
+  const now=Date.now(), day=86400000;
+  const activeToday=ua.filter(u=>(now-u.lastSeen)<day).length;
+  const msgsToday=ma.filter(m=>(now-m.timestamp)<day).length;
+
+  $('healthGrid').innerHTML = [
+    {lbl:'Total Users',val:ua.length,sub:'registered',color:'var(--gold)',pct:Math.min(100,ua.length/100*10)},
+    {lbl:'Active Today',val:activeToday,sub:'last 24h',color:'var(--green)',pct:ua.length?Math.round(activeToday/ua.length*100):0},
+    {lbl:'Messages Today',val:msgsToday,sub:'last 24h',color:'var(--blue)',pct:Math.min(100,msgsToday/10)},
+    {lbl:'Online Now',val:ua.filter(u=>u.status==='online').length,sub:'live',color:'var(--purple)',pct:ua.length?Math.round(ua.filter(u=>u.status==='online').length/ua.length*100):0},
+  ].map(h=>`
+    <div class="hcard">
+      <div class="hcard-lbl">${h.lbl}</div>
+      <div class="hcard-val" style="color:${h.color}">${h.val}</div>
+      <div class="hcard-sub">${h.sub}</div>
+      <div class="hprogress"><div class="hprogress-fill" style="width:${h.pct}%"></div></div>
+    </div>
+  `).join('');
+
+  $('healthStats').innerHTML = `
+    <div class="hbar-row"><div class="hbar-lbl">Total Msgs</div><div class="hbar-track"><div class="hbar-fill" style="width:100%;background:var(--blue)"></div></div><div class="hbar-val">${ma.length}</div></div>
+    <div class="hbar-row"><div class="hbar-lbl">Images</div><div class="hbar-track"><div class="hbar-fill" style="width:${ma.length?Math.round(ma.filter(m=>m.type==='image').length/ma.length*100):0}%;background:var(--purple)"></div></div><div class="hbar-val">${ma.filter(m=>m.type==='image').length}</div></div>
+    <div class="hbar-row"><div class="hbar-lbl">Voice</div><div class="hbar-track"><div class="hbar-fill" style="width:${ma.length?Math.round(ma.filter(m=>m.type==='audio').length/ma.length*100):0}%;background:var(--green)"></div></div><div class="hbar-val">${ma.filter(m=>m.type==='audio').length}</div></div>
+    <div class="hbar-row"><div class="hbar-lbl">Files</div><div class="hbar-track"><div class="hbar-fill" style="width:${ma.length?Math.round(ma.filter(m=>m.type==='file').length/ma.length*100):0}%;background:var(--orange)"></div></div><div class="hbar-val">${ma.filter(m=>m.type==='file').length}</div></div>
+    <div class="hbar-row"><div class="hbar-lbl">Stickers</div><div class="hbar-track"><div class="hbar-fill" style="width:${ma.length?Math.round(ma.filter(m=>m.type==='sticker').length/ma.length*100):0}%;background:var(--cyan)"></div></div><div class="hbar-val">${ma.filter(m=>m.type==='sticker').length}</div></div>
+  `;
 }
 
+// ══════════════════════════
+//  SETTINGS
+// ══════════════════════════
+function saveSetting(k,v) { db.ref('adminSettings').child(k).set(v); toast('Saved: '+k+' = '+v,'ok'); }
 function loadSettings() {
-    db.ref('adminSettings').once('value').then(snap => {
-        const s = snap.val() || {};
-    });
+  db.ref('adminSettings').once('value').then(s=>{
+    const settings=s.val()||{};
+    const map={allowRegistration:'togReg',maintenanceMode:'togMaint',allowFiles:'togFiles',allowVideo:'togVideo',allowVoice:'togVoice'};
+    Object.entries(map).forEach(([k,id])=>{ const el=$(id); if(el&&settings[k]!==undefined) el.checked=settings[k]; });
+  });
+}
+function changePass() {
+  const p1=$('np1').value, p2=$('np2').value;
+  if (!p1) { toast('Password empty hai','err'); return; }
+  if (p1!==p2) { toast('Passwords match nahi kar rahe','err'); return; }
+  if (p1.length<6) { toast('Min 6 characters','err'); return; }
+  adminPass=p1; localStorage.setItem('mukuAdminPass',p1);
+  $('np1').value=''; $('np2').value='';
+  toast('Password changed ✓','ok');
 }
 
-function changePassword() {
-    const np = document.getElementById('newPassInput').value;
-    const nc = document.getElementById('newPassConfirm').value;
-    if (!np) { toast('Password khali hai', 'error'); return; }
-    if (np !== nc) { toast('Passwords match nahi kar rahe', 'error'); return; }
-    if (np.length < 6) { toast('Min 6 characters chahiye', 'error'); return; }
-    adminPass = np;
-    localStorage.setItem('adminPass', np);
-    document.getElementById('newPassInput').value = '';
-    document.getElementById('newPassConfirm').value = '';
-    toast('Password changed!', 'success');
+// ══════════════════════════
+//  EXPORT CSV
+// ══════════════════════════
+function exportCSV() {
+  const rows=[['Username','ID','Status','Joined','Last Seen','Messages']];
+  const msgCnt={};
+  Object.values(allMsgs).forEach(c=>Object.values(c||{}).forEach(m=>{ msgCnt[m.fromId]=(msgCnt[m.fromId]||0)+1; }));
+  Object.entries(allUsers).forEach(([id,u])=>{
+    rows.push([u.username||'',id,u.status||'',fmtDT(u.createdAt),fmtDT(u.lastSeen),msgCnt[id]||0]);
+  });
+  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='muku_users_'+Date.now()+'.csv';
+  a.click();
+  toast('CSV exported ✓','ok');
+  addLog('bulk','User data CSV export kiya','bgd');
 }
 
-// ========== UI HELPERS ==========
-function switchPage(name, navEl) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById(`page-${name}`).classList.add('active');
-    if (navEl) navEl.classList.add('active');
-    const titles = { dashboard:'Dashboard', users:'Users', messages:'Messages', activity:'Activity Log', files:'Files', broadcast:'Broadcast', banned:'Banned Users', settings:'Settings' };
-    document.getElementById('topbarTitle').textContent = titles[name] || name;
-    if (window.innerWidth <= 700) document.getElementById('sidebar').classList.remove('mob-open');
+// ══════════════════════════
+//  CONFIRM MODAL
+// ══════════════════════════
+function confirm2(title,desc,fn) {
+  $('cfmTitle').textContent=title;
+  $('cfmDesc').textContent=desc;
+  cfmPending=fn;
+  $('cfmOv').classList.add('on');
+}
+function closeCfm() { $('cfmOv').classList.remove('on'); cfmPending=null; }
+$('cfmOkBtn').onclick=()=>{ if(cfmPending) cfmPending(); closeCfm(); };
+$('cfmOv').addEventListener('click',e=>{ if(e.target===$('cfmOv')) closeCfm(); });
+$('profileOv').addEventListener('click',e=>{ if(e.target===$('profileOv')) closeProfile(); });
+
+function confirmNuke(node) {
+  const names={messages:'All Messages',adminLog:'Activity Log',broadcasts:'Broadcast History'};
+  confirm2('Delete '+names[node],'Permanently delete hoga!',()=>{
+    db.ref(node).remove();
+    addLog('bulk',names[node]+' delete kiya gaya','br');
+    toast('Deleted','err');
+  });
+}
+
+// ══════════════════════════
+//  TOAST
+// ══════════════════════════
+function toast(msg,type='') {
+  const el=document.createElement('div');
+  el.className='toast '+(type==='ok'?'ok':type==='err'?'err':'info');
+  el.textContent=msg;
+  $('toasts').appendChild(el);
+  setTimeout(()=>el.remove(),3000);
+}
+
+// ══════════════════════════
+//  NAV + UI
+// ══════════════════════════
+function go(name,el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  $('page-'+name).classList.add('active');
+  el.classList.add('active');
+  const titles={dashboard:'Dashboard',users:'Users',online:'Online Users',messages:'Messages',files:'Files & Media',activity:'Activity Log',broadcast:'Broadcast',moderation:'Moderation',banned:'Banned Users',health:'System Health',settings:'Settings'};
+  $('pageTitle').textContent=titles[name]||name;
+  if(window.innerWidth<=700) closeMobSb();
 }
 
 function refreshAll() {
-    refreshStats();
-    renderUsers();
-    renderConversations();
-    renderFiles();
-    renderActivity();
-    renderBanned();
-    buildActivityChart();
-    toast('Refreshed', 'success');
+  refreshStats(); renderUsers(); renderConvs(); renderFiles(); renderActivity(); renderBanned(); renderOnline(); buildChart(); buildTypeChart(); updateHealth();
+  toast('Refreshed','ok');
 }
 
-function openModal(title, desc, onConfirm) {
-    document.getElementById('modalTitle').textContent = title;
-    document.getElementById('modalDesc').textContent = desc;
-    document.getElementById('confirmModal').classList.add('show');
-    pendingAction = onConfirm;
-}
-
-function closeModal() {
-    document.getElementById('confirmModal').classList.remove('show');
-    pendingAction = null;
-}
-
-document.getElementById('modalConfirmBtn').onclick = () => {
-    if (pendingAction) pendingAction();
-    closeModal();
-};
-
-function toast(msg, type='') {
-    const el = document.createElement('div');
-    el.className = `toast ${type}`;
-    el.textContent = msg;
-    document.getElementById('toastArea').appendChild(el);
-    setTimeout(() => el.remove(), 3000);
-}
+function openMobSb() { $('sb').classList.add('open'); $('sbOv').classList.add('on'); }
+function closeMobSb() { $('sb').classList.remove('open'); $('sbOv').classList.remove('on'); }
 
 function startClock() {
-    function tick() {
-        document.getElementById('clock').textContent = new Date().toLocaleTimeString();
-    }
-    tick();
-    setInterval(tick, 1000);
+  const tick=()=>$('clock').textContent=new Date().toLocaleTimeString();
+  tick(); setInterval(tick,1000);
 }
 
-function esc(t) {
-    if (!t) return '';
-    const d = document.createElement('div');
-    d.textContent = t;
-    return d.innerHTML;
+// ══════════════════════════
+//  UTILS
+// ══════════════════════════
+const $=id=>document.getElementById(id);
+function esc(t){if(!t)return '';const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+function timeAgo(ts){
+  if(!ts)return '—';
+  const d=Date.now()-ts;
+  if(d<60000)return 'Just now';
+  if(d<3600000)return Math.floor(d/60000)+'m ago';
+  if(d<86400000)return Math.floor(d/3600000)+'h ago';
+  return Math.floor(d/86400000)+'d ago';
+}
+function fmtDT(ts){
+  if(!ts)return '—';
+  return new Date(ts).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
 }
 
-function timeAgo(ts) {
-    if (!ts) return '—';
-    const diff = Date.now() - ts;
-    if (diff < 60000) return 'Just now';
-    if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
-    if (diff < 86400000) return `${Math.floor(diff/3600000)}h ago`;
-    return `${Math.floor(diff/86400000)}d ago`;
-}
-
-function formatDateTime(ts) {
-    if (!ts) return '—';
-    return new Date(ts).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
-}
-
-// Close modal on overlay click
-document.getElementById('confirmModal').addEventListener('click', e => {
-    if (e.target === document.getElementById('confirmModal')) closeModal();
-});
-
-// Auto-login if session active
-if (sessionStorage.getItem('adminLoggedIn') === '1') {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('app').classList.add('show');
-    initAdmin();
-}
+document.getElementById('bSearch')?.addEventListener('input',renderBanned);
 </script>
 </body>
 </html>
